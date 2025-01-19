@@ -1,0 +1,27 @@
+# load EFI video modules
+if [ "${grub_platform}" == "efi" ]; then
+    insmod efi_gop
+    insmod efi_uga
+fi
+
+# create and activate serial console
+function setup_serial {
+    # initialize the first serial port by default
+    if [ "${console_type}" == "ttyS" ]; then
+        if [ "${console_num}" == "0" ]; then
+          serial --unit=0 --speed=${console_speed}
+        else
+          serial --unit=${console_num} --speed=115200
+        fi
+    else
+        serial --unit=0 --speed=${console_speed}
+    fi
+    terminal_output --append serial console
+    terminal_input --append serial console
+}
+
+setup_serial
+
+{% if search_root %}
+{{ search_root }}
+{% endif %}

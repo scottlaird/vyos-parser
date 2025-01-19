@@ -1,0 +1,42 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3043: rename Wireless interface security mode 'both' to 'wpa+wpa2'
+# T3043: move "system wifi-regulatory-domain" to indicidual wireless interface
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    base = ['interfaces', 'wireless']
+
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    country_code = ''
+    cc_cli = ['system', 'wifi-regulatory-domain']
+    if config.exists(cc_cli):
+        country_code = config.return_value(cc_cli)
+        config.delete(cc_cli)
+
+    for wifi in config.list_nodes(base):
+        sec_mode = base + [wifi, 'security', 'wpa', 'mode']
+        if config.exists(sec_mode):
+            mode = config.return_value(sec_mode)
+            if mode == 'both':
+                config.set(sec_mode, value='wpa+wpa2', replace=True)
+
+        if country_code:
+            config.set(base + [wifi, 'country-code'], value=country_code)

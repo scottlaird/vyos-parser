@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="conntrack">
+        <properties>
+          <help>Show conntrack tables entries</help>
+        </properties>
+        <children>
+          <node name="statistics">
+            <properties>
+              <help>Show conntrack statistics</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack.py show_statistics</command>
+          </node>
+          <node name="table">
+            <properties>
+              <help>Show conntrack entries for table</help>
+            </properties>
+            <children>
+              <node name="ipv4">
+                <properties>
+                  <help>Show conntrack entries for IPv4 protocol</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack.py show --family inet</command>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>Show conntrack entries for IPv6 protocol</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack.py show --family inet6</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

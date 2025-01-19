@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="rpki">
+        <properties>
+          <help>Show RPKI (Resource Public Key Infrastructure) information</help>
+        </properties>
+        <children>
+          <tagNode name="as-number">
+             <properties>
+               <help>Lookup by ASN in prefix table</help>
+               <completionHelp>
+                 <list>&lt;ASNUM&gt;</list>
+               </completionHelp>
+             </properties>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </tagNode>
+          <leafNode name="cache-connection">
+            <properties>
+              <help>Show RPKI cache connections</help>
+            </properties>
+            <command>vtysh -c "show rpki cache-connection"</command>
+          </leafNode>
+          <leafNode name="cache-server">
+             <properties>
+               <help>Show RPKI cache servers information</help>
+             </properties>
+             <command>vtysh -c "show rpki cache-server"</command>
+          </leafNode>
+          <tagNode name="prefix">
+             <properties>
+               <help>Lookup IP prefix and optionally ASN in prefix table</help>
+               <completionHelp>
+                 <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+               </completionHelp>
+             </properties>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+               <tagNode name="as-number">
+                <properties>
+                  <help>AS Number</help>
+                  <completionHelp>
+                    <list>&lt;ASNUM&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $(echo $@ | sed -e "s/as-number //g")</command>
+              </tagNode>
+             </children>
+          </tagNode>
+          <leafNode name="prefix-table">
+             <properties>
+               <help>Show RPKI-validated prefixes</help>
+             </properties>
+             <command>vtysh -c "show rpki prefix-table"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="reset">
+    <children>
+      <leafNode name="rpki">
+        <properties>
+          <help>Reset RPKI</help>
+        </properties>
+        <command>vtysh -c "rpki reset"</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

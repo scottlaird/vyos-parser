@@ -1,0 +1,70 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from vyos.configtree import ConfigTree
+
+# We no longer support hashed values prefixed with '0x' to unclutter
+# CLI and also calculate the hases in advance instead of retrieving
+# them after service startup - which was always a bad idea
+prefix = '0x'
+
+def migrate_keys(config, path):
+    # authentication: rename node 'encrypted-key' -> 'encrypted-password'
+    config_path_auth = path + ['auth', 'encrypted-key']
+    if config.exists(config_path_auth):
+        config.rename(config_path_auth, 'encrypted-password')
+        config_path_auth = path + ['auth', 'encrypted-password']
+
+        # remove leading '0x' from string if present
+        tmp = config.return_value(config_path_auth)
+        if tmp.startswith(prefix):
+            tmp = tmp.replace(prefix, '')
+            config.set(config_path_auth, value=tmp)
+
+    # privacy: rename node 'encrypted-key' -> 'encrypted-password'
+    config_path_priv = path + ['privacy', 'encrypted-key']
+    if config.exists(config_path_priv):
+        config.rename(config_path_priv, 'encrypted-password')
+        config_path_priv = path + ['privacy', 'encrypted-password']
+
+        # remove leading '0x' from string if present
+        tmp = config.return_value(config_path_priv)
+        if tmp.startswith(prefix):
+            tmp = tmp.replace(prefix, '')
+            config.set(config_path_priv, value=tmp)
+
+def migrate(config: ConfigTree) -> None:
+    config_base = ['service', 'snmp', 'v3']
+
+    if not config.exists(config_base):
+        # Nothing to do
+        return
+
+    config_engineid = config_base + ['engineid']
+    if config.exists(config_engineid):
+        tmp = config.return_value(config_engineid)
+        if tmp.startswith(prefix):
+            tmp = tmp.replace(prefix, '')
+            config.set(config_engineid, value=tmp)
+
+    config_user = config_base + ['user']
+    if config.exists(config_user):
+        for user in config.list_nodes(config_user):
+            migrate_keys(config, config_user + [user])
+
+    config_trap = config_base + ['trap-target']
+    if config.exists(config_trap):
+        for trap in config.list_nodes(config_trap):
+            migrate_keys(config, config_trap + [trap])

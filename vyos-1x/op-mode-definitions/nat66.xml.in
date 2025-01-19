@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="nat66">
+        <properties>
+          <help>Show IPv6 Network Address Translation (NAT66) information</help>
+        </properties>
+        <children>
+          <node name="source">
+            <properties>
+              <help>Show source IPv6 to IPv6 Network Address Translation (NAT66) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured source NAT66 rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet6</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured source NAT66 rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction source --family inet6</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active source NAT66 translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active source NAT66 translations for an IPv6 address</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet6 --address "$6"</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet6</command>
+              </node>
+            </children>
+          </node>
+          <node name="destination">
+            <properties>
+              <help>Show destination IPv6 to IPv6 Network Address Translation (NAT66) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured destination NAT66 rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet6</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured destination NAT66 rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction destination --family inet6</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active destination NAT66 translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active NAT66 destination translations for an IPv6 address</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet6 --address "$6"</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet6</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

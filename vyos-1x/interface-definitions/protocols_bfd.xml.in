@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<!-- Bidirectional Forwarding Detection (BFD) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="bfd" owner="${vyos_conf_scripts_dir}/protocols_bfd.py">
+        <properties>
+          <help>Bidirectional Forwarding Detection (BFD)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          <tagNode name="peer">
+            <properties>
+              <help>Configures BFD peer to listen and talk to</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>BFD peer IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>BFD peer IPv6 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/bfd/profile.xml.i>
+              <node name="source">
+                <properties>
+                  <help>Bind listener to specified interface/address, mandatory for IPv6</help>
+                </properties>
+                <children>
+                  #include <include/generic-interface.xml.i>
+                  <leafNode name="address">
+                    <properties>
+                      <help>Local address to bind our peer listener to</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 address used to connect to the peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 address used to connect to the peer</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/bfd/common.xml.i>
+              <leafNode name="multihop">
+                <properties>
+                  <help>Allow this BFD peer to not be directly connected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/interface/vrf.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="profile">
+            <properties>
+              <help>Configure BFD profile used by individual peer</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Name of BFD profile</description>
+              </valueHelp>
+              <constraint>
+                <regex>[-_a-zA-Z0-9]{1,32}</regex>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/bfd/common.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

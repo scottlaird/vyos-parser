@@ -1,0 +1,218 @@
+
+The following examples are in the form as entered in the GraphQL
+'playground', which is found at:
+
+https://{{ host_address }}/graphql
+
+Example using GraphQL mutations to configure a DHCP server:
+
+All examples assume that the http-api is running:
+
+'set service https api'
+
+One can configure an address on an interface, and configure the DHCP server
+to run with that address as default router by requesting these 'mutations'
+in the GraphQL playground:
+
+mutation {
+  CreateInterfaceEthernet (data: {interface: "eth1",
+                                  address: "192.168.0.1/24",
+                                  description: "BOB"}) {
+    success
+    errors
+    data {
+      address
+    }
+  }
+}
+
+mutation {
+  CreateDhcpServer(data: {sharedNetworkName: "BOB",
+                          subnet: "192.168.0.0/24",
+                          defaultRouter: "192.168.0.1",
+                          nameServer: "192.168.0.1",
+                          domainName: "vyos.net",
+                          lease: 86400,
+                          range: 0,
+                          start: "192.168.0.9",
+                          stop: "192.168.0.254",
+                          dnsForwardingAllowFrom: "192.168.0.0/24",
+                          dnsForwardingCacheSize: 0,
+                          dnsForwardingListenAddress: "192.168.0.1"}) {
+    success
+    errors
+    data {
+      defaultRouter
+    }
+  }
+}
+
+To save the configuration, use the following mutation:
+
+mutation {
+  SaveConfigFile(data: {fileName: "/config/config.boot"}) {
+    success
+    errors
+    data {
+      fileName
+    }
+  }
+}
+
+N.B. fileName can be empty (fileName: "") or data can be empty (data: {}) to
+save to /config/config.boot; to save to an alternative path, specify
+fileName.
+
+Similarly, using an analogous 'endpoint' (meaning the form of the request
+and resolver; the actual enpoint for all GraphQL requests is
+https://hostname/graphql), one can load an arbitrary config file from a
+path.
+
+mutation {
+  LoadConfigFile(data: {fileName: "/home/vyos/config.boot"}) {
+    success
+    errors
+    data {
+      fileName
+    }
+  }
+}
+
+Op-mode 'show' commands may be requested by path, e.g.:
+
+query {
+  Show (data: {path: ["interfaces", "ethernet", "detail"]}) {
+    success
+    errors
+    data {
+      result
+    }
+  }
+}
+
+N.B. to see the output the 'data' field 'result' must be present in the
+request.
+
+Mutations to manipulate firewall address groups:
+
+mutation {
+  CreateFirewallAddressGroup (data: {name: "ADDR-GRP", address: "10.0.0.1"}) {
+    success
+    errors
+  }
+}
+
+mutation {
+  UpdateFirewallAddressGroupMembers (data: {name: "ADDR-GRP",
+                                            address: ["10.0.0.1-10.0.0.8", "192.168.0.1"]}) {
+    success
+    errors
+  }
+}
+
+mutation {
+  RemoveFirewallAddressGroupMembers (data: {name: "ADDR-GRP",
+                                            address: "192.168.0.1"}) {
+    success
+    errors
+  }
+}
+
+N.B. The schema for the above specify that 'address' be of the form 'list of
+strings' (SDL type [String!]! for UpdateFirewallAddressGroupMembers, where
+the ! indicates that the input is required; SDL type [String] in
+CreateFirewallAddressGroup, since a group may be created without any
+addresses). However, notice that a single string may be passed without being
+a member of a list, in which case the specification allows for 'input
+coercion':
+
+http://spec.graphql.org/October2021/#sec-Scalars.Input-Coercion
+
+Similarly, IPv6 versions of the above:
+
+CreateFirewallAddressIpv6Group
+UpdateFirewallAddressIpv6GroupMembers
+RemoveFirewallAddressIpv6GroupMembers
+
+
+Instead of using the GraphQL playground, an equivalent curl command to the
+first example above would be:
+
+curl -k 'https://192.168.100.168/graphql' -H 'Content-Type: application/json' --data-binary '{"query": "mutation {createInterfaceEthernet (data: {interface: \"eth1\", address: \"192.168.0.1/24\", description: \"BOB\"}) {success errors data {address}}}"}'
+
+Note that the 'mutation' term is prefaced by 'query' in the curl command.
+
+Curl equivalents may be read from within the GraphQL playground at the 'copy
+curl' button.
+
+What's here:
+
+services
+├── api
+│   └── graphql
+│       ├── bindings.py
+│       ├── graphql
+│       │   ├── directives.py
+│       │   ├── __init__.py
+│       │   ├── mutations.py
+│       │   └── schema
+│       │       ├── config_file.graphql
+│       │       ├── dhcp_server.graphql
+│       │       ├── firewall_group.graphql
+│       │       ├── interface_ethernet.graphql
+│       │       ├── schema.graphql
+│       │       ├── show_config.graphql
+│       │       └── show.graphql
+│       ├── README.graphql
+│       ├── recipes
+│       │   ├── __init__.py
+│       │   ├── remove_firewall_address_group_members.py
+│       │   ├── session.py
+│       │   └── templates
+│       │       ├── create_dhcp_server.tmpl
+│       │       ├── create_firewall_address_group.tmpl
+│       │       ├── create_interface_ethernet.tmpl
+│       │       ├── remove_firewall_address_group_members.tmpl
+│       │       └── update_firewall_address_group_members.tmpl
+│       └── state.py
+├── vyos-configd
+├── vyos-hostsd
+└── vyos-http-api-server
+
+The GraphQL library that we are using, Ariadne, advertises itself as a
+'schema-first' implementation: define the schema; define resolvers
+(handlers) for declared Query and Mutation types (Subscription types are not
+currently used).
+
+In the current approach to a high-level API, we consider the
+Jinja2-templated collection of configuration mode 'set'/'delete' commands as
+the Ur-data; the GraphQL schema is produced from those files, located in
+'api/graphql/recipes/templates'.
+
+Resolvers for the schema Mutation fields are dynamically generated using a
+'directive' added to the respective schema field. The directive,
+'@configure', is handled by the class 'ConfigureDirective' in
+'api/graphql/graphql/directives.py', which calls the
+'make_configure_resolver' function in 'api/graphql/graphql/mutations.py';
+the produced resolver calls the appropriate wrapper in
+'api/graphql/recipes', with base class doing the (overridable) configuration
+steps of calling all defined 'set'/'delete' commands.
+
+Integrating the above with vyos-http-api-server is 4 lines of code.
+
+What needs to be done:
+
+• automate generation of schema and wrappers from templated configuration
+commands
+
+• investigate whether the subclassing provided by the named wrappers in
+'api/graphql/recipes' is sufficient for use cases which need to modify data
+
+• encapsulate the manipulation of 'canonical names' which transforms the
+prefixed camel-case schema names to various snake-case file/function names
+
+• consider mechanism for migration of templates: offline vs. on-the-fly
+
+• define the naming convention for those schema fields that refer to
+configuration mode parameters: e.g. how much of the path is needed as prefix
+to uniquely define the term

@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <properties>
+      <help>Routing protocols</help>
+    </properties>
+    <children>
+       <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py">
+        <properties>
+          <help>Static Routing</help>
+          <priority>480</priority>
+        </properties>
+        <children>
+          <tagNode name="mroute">
+            <properties>
+              <help>Static IPv4 route for Multicast RIB</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>Network</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <tagNode name="next-hop">
+                <properties>
+                  <help>Next-hop IPv4 router address</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Next-hop router address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/static/static-route-distance.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Next-hop IPv4 router interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Gateway interface name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/static/static-route-distance.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          #include <include/route-map.xml.i>
+          #include <include/static/static-route.xml.i>
+          #include <include/static/static-route6.xml.i>
+          <tagNode name="table">
+            <properties>
+              <help>Policy route table number</help>
+              <valueHelp>
+                <format>u32:1-200</format>
+                <description>Policy route table number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-200"/>
+              </constraint>
+            </properties>
+            <children>
+              <!--
+                iproute2 only considers the first "word" until whitespace in the name field
+                but does not complain about special characters.
+                We put an artificial limit here to make table descriptions potentially valid node names
+                to avoid quoting and simplify future syntax changes if we decide to make any.
+              -->
+              #include <include/generic-description.xml.i>
+              #include <include/static/static-route.xml.i>
+              #include <include/static/static-route6.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

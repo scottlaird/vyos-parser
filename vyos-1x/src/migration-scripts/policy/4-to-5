@@ -1,0 +1,106 @@
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T2199: Migrate interface policy nodes to policy route <name> interface <ifname>
+
+from vyos.configtree import ConfigTree
+
+base4 = ['policy', 'route']
+base6 = ['policy', 'route6']
+
+def delete_orphaned_interface_policy(config, iftype, ifname, vif=None, vifs=None, vifc=None):
+    """Delete unexpected policy on interfaces in cases when
+       policy does not exist but inreface has a policy configuration
+       Example T5941:
+         set interfaces bonding bond0 vif 995 policy
+    """
+    if_path = ['interfaces', iftype, ifname]
+
+    if vif:
+        if_path += ['vif', vif]
+    elif vifs:
+        if_path += ['vif-s', vifs]
+        if vifc:
+            if_path += ['vif-c', vifc]
+
+    if not config.exists(if_path + ['policy']):
+        return
+
+    config.delete(if_path + ['policy'])
+
+def migrate_interface(config, iftype, ifname, vif=None, vifs=None, vifc=None):
+    if_path = ['interfaces', iftype, ifname]
+    ifname_full = ifname
+
+    if vif:
+        if_path += ['vif', vif]
+        ifname_full = f'{ifname}.{vif}'
+    elif vifs:
+        if_path += ['vif-s', vifs]
+        ifname_full = f'{ifname}.{vifs}'
+        if vifc:
+            if_path += ['vif-c', vifc]
+            ifname_full = f'{ifname}.{vifs}.{vifc}'
+
+    if not config.exists(if_path + ['policy']):
+        return
+
+    if config.exists(if_path + ['policy', 'route']):
+        route_name = config.return_value(if_path + ['policy', 'route'])
+        config.set(base4 + [route_name, 'interface'], value=ifname_full, replace=False)
+
+    if config.exists(if_path + ['policy', 'route6']):
+        route_name = config.return_value(if_path + ['policy', 'route6'])
+        config.set(base6 + [route_name, 'interface'], value=ifname_full, replace=False)
+
+    config.delete(if_path + ['policy'])
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base4) and not config.exists(base6):
+        # Delete orphaned nodes on interfaces T5941
+        for iftype in config.list_nodes(['interfaces']):
+            for ifname in config.list_nodes(['interfaces', iftype]):
+                delete_orphaned_interface_policy(config, iftype, ifname)
+
+                if config.exists(['interfaces', iftype, ifname, 'vif']):
+                    for vif in config.list_nodes(['interfaces', iftype, ifname, 'vif']):
+                        delete_orphaned_interface_policy(config, iftype, ifname, vif=vif)
+
+                if config.exists(['interfaces', iftype, ifname, 'vif-s']):
+                    for vifs in config.list_nodes(['interfaces', iftype, ifname, 'vif-s']):
+                        delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs)
+
+                        if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                            for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                                delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs, vifc=vifc)
+
+        # Nothing to do
+        return
+
+    for iftype in config.list_nodes(['interfaces']):
+        for ifname in config.list_nodes(['interfaces', iftype]):
+            migrate_interface(config, iftype, ifname)
+
+            if config.exists(['interfaces', iftype, ifname, 'vif']):
+                for vif in config.list_nodes(['interfaces', iftype, ifname, 'vif']):
+                    migrate_interface(config, iftype, ifname, vif=vif)
+
+            if config.exists(['interfaces', iftype, ifname, 'vif-s']):
+                for vifs in config.list_nodes(['interfaces', iftype, ifname, 'vif-s']):
+                    migrate_interface(config, iftype, ifname, vifs=vifs)
+
+                    if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                        for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                            migrate_interface(config, iftype, ifname, vifs=vifs, vifc=vifc)

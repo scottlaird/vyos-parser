@@ -1,0 +1,82 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5643: move from 'set nat [source|destination] rule X [inbound-interface|outbound interface] <iface>'
+# to
+# 'set nat [source|destination] rule X [inbound-interface|outbound interface] interface-name <iface>'
+
+# T6100: Migration from 1.3.X to 1.4
+# Change IP/netmask to Network/netmask in
+#   'set nat [source|destination] rule X [source| destination| translation] address <IP/Netmask| !IP/Netmask>'
+
+import ipaddress
+
+from vyos.configtree import ConfigTree
+
+
+def _func_T5643(conf, base_path):
+    for iface in ['inbound-interface', 'outbound-interface']:
+        if conf.exists(base_path + [iface]):
+            tmp = conf.return_value(base_path + [iface])
+            if tmp:
+                conf.delete(base_path + [iface])
+                conf.set(base_path + [iface, 'interface-name'], value=tmp)
+    return
+
+
+def _func_T6100(conf, base_path):
+    for addr_type in ['source', 'destination', 'translation']:
+        base_addr_type = base_path + [addr_type]
+        if not conf.exists(base_addr_type) or not conf.exists(
+                base_addr_type + ['address']):
+            continue
+
+        address = conf.return_value(base_addr_type + ['address'])
+
+        if not address or '/' not in address:
+            continue
+
+        negative = ''
+        network = address
+        if '!' in address:
+            negative = '!'
+            network = str(address.split(negative)[1])
+
+        network_ip = ipaddress.ip_network(network, strict=False)
+        if str(network_ip) != network:
+            network = f'{negative}{str(network_ip)}'
+            conf.set(base_addr_type + ['address'], value=network)
+    return
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['nat']):
+        # Nothing to do
+        return
+
+    for direction in ['source', 'destination']:
+        # If a node doesn't exist, we obviously have nothing to do.
+        if not config.exists(['nat', direction]):
+            continue
+
+        # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+        # but there are no rules under it.
+        if not config.list_nodes(['nat', direction]):
+            continue
+
+        for rule in config.list_nodes(['nat', direction, 'rule']):
+            base = ['nat', direction, 'rule', rule]
+            _func_T5643(config,base)
+            _func_T6100(config,base)

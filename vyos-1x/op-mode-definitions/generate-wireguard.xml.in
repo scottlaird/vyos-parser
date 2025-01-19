@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="wireguard">
+        <properties>
+          <help>Generate WireGuard client config QR code</help>
+        </properties>
+        <children>
+          <tagNode name="client-config">
+            <properties>
+              <help>Generate Client config QR code</help>
+              <completionHelp>
+                <list>&lt;client-name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Local interface used for connection</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type wireguard</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="server">
+                    <properties>
+                      <help>IP address/FQDN used for client connection</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                        <list>&lt;hostname&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8"</command>
+                    <children>
+                      <tagNode name="address">
+                        <properties>
+                          <help>IPv4/IPv6 address used by client</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}"</command>
+                        <children>
+                          <tagNode name="address">
+                            <properties>
+                              <help>IPv4/IPv6 address used by client</help>
+                              <completionHelp>
+                                <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}" --address "${12}"</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

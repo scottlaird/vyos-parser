@@ -1,0 +1,35 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5034: tunnel: rename "multicast enable" CLI node to "enable-multicast"
+#        valueless node.
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'tunnel']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for ifname in config.list_nodes(base):
+        multicast_base = base + [ifname, 'multicast']
+        if config.exists(multicast_base):
+            tmp = config.return_value(multicast_base)
+            print(tmp)
+            # Delete old Config node
+            config.delete(multicast_base)
+            if tmp == 'enable':
+                config.set(base + [ifname, 'enable-multicast'])

@@ -1,0 +1,31 @@
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'ipv6']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # T4346: drop support to disbale IPv6 address family within the OS Kernel
+    if config.exists(base + ['disable']):
+        config.delete(base + ['disable'])
+        # IPv6 address family disable was the only CLI option set - we can cleanup
+        # the entire tree
+        if len(config.list_nodes(base)) == 0:
+            config.delete(base)

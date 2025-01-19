@@ -1,0 +1,57 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3316:
+# - Migrate dhcp options under new option node
+# - Add subnet IDs to existing subnets
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'dhcp-server', 'shared-network-name']
+
+option_nodes = ['bootfile-name', 'bootfile-server', 'bootfile-size', 'captive-portal',
+                'client-prefix-length', 'default-router', 'domain-name', 'domain-search',
+                'name-server', 'ip-forwarding', 'ipv6-only-preferred', 'ntp-server',
+                'pop-server', 'server-identifier', 'smtp-server', 'static-route',
+                'tftp-server-name', 'time-offset', 'time-server', 'time-zone',
+                'vendor-option', 'wins-server', 'wpad-url']
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    subnet_id = 1
+
+    for network in config.list_nodes(base):
+        for option in option_nodes:
+            if config.exists(base + [network, option]):
+                config.set(base + [network, 'option'])
+                config.copy(base + [network, option], base + [network, 'option', option])
+                config.delete(base + [network, option])
+
+        if config.exists(base + [network, 'subnet']):
+            for subnet in config.list_nodes(base + [network, 'subnet']):
+                base_subnet = base + [network, 'subnet', subnet]
+
+                for option in option_nodes:
+                    if config.exists(base_subnet + [option]):
+                        config.set(base_subnet + ['option'])
+                        config.copy(base_subnet + [option], base_subnet + ['option', option])
+                        config.delete(base_subnet + [option])
+
+                config.set(base_subnet + ['subnet-id'], value=subnet_id)
+                subnet_id += 1

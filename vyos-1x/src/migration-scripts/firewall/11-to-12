@@ -1,0 +1,51 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5681: Firewall re-writing. Simplify cli when mathcing interface
+# From
+    # set firewall ... rule <rule> [inbound-interface | outboubd-interface] interface-name <iface>
+    # set firewall ... rule <rule> [inbound-interface | outboubd-interface] interface-group <iface_group>
+# To
+    # set firewall ... rule <rule> [inbound-interface | outboubd-interface] name <iface>
+    # set firewall ... rule <rule> [inbound-interface | outboubd-interface] group <iface_group>
+
+from vyos.configtree import ConfigTree
+
+base = ['firewall']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    ## Migration from base chains
+    #if config.exists(base + ['interface', iface, direction]):
+    for family in ['ipv4', 'ipv6']:
+        if config.exists(base + [family]):
+            for hook in ['forward', 'input', 'output', 'name']:
+                if config.exists(base + [family, hook]):
+                    for priority in config.list_nodes(base + [family, hook]):
+                        if config.exists(base + [family, hook, priority, 'rule']):
+                            for rule in config.list_nodes(base + [family, hook, priority, 'rule']):
+                                for direction in ['inbound-interface', 'outbound-interface']:
+                                    if config.exists(base + [family, hook, priority, 'rule', rule, direction]):
+                                        if config.exists(base + [family, hook, priority, 'rule', rule, direction, 'interface-name']):
+                                            iface = config.return_value(base + [family, hook, priority, 'rule', rule, direction, 'interface-name'])
+                                            config.set(base + [family, hook, priority, 'rule', rule, direction, 'name'], value=iface)
+                                            config.delete(base + [family, hook, priority, 'rule', rule, direction, 'interface-name'])
+                                        elif config.exists(base + [family, hook, priority, 'rule', rule, direction, 'interface-group']):
+                                            group = config.return_value(base + [family, hook, priority, 'rule', rule, direction, 'interface-group'])
+                                            config.set(base + [family, hook, priority, 'rule', rule, direction, 'group'], value=group)
+                                            config.delete(base + [family, hook, priority, 'rule', rule, direction, 'interface-group'])

@@ -1,0 +1,32 @@
+{% if ordered_named_pools is vyos_defined %}
+[ip-pool]
+{%     if gateway_address is vyos_defined %}
+{%         if server_type == 'ipoe' %}
+{%             for gw in gateway_address %}
+{%                 set host_address, _ = gw.split('/') %}
+gw-ip-address={{ host_address }}
+{%             endfor %}
+{%         else %}
+gw-ip-address={{ gateway_address }}
+{%         endif %}
+{%     endif %}
+{%     for pool in ordered_named_pools %}
+{%         for pool_name, pool_config in pool.items() %}
+{%             if pool_config.range is vyos_defined %}
+{%                 for range in pool_config.range %}
+{%                     set iprange_str = range %}
+{%                     set iprange_list = range.split('-') %}
+{%                     if iprange_list | length == 2 %}
+{%                         set last_ip_oct = iprange_list[1].split('.') %}
+{%                         set iprange_str = iprange_list[0] + '-' + last_ip_oct[last_ip_oct | length - 1] %}
+{%                     endif %}
+{%                     if loop.last and pool_config.next_pool is vyos_defined %}
+{{ iprange_str }},name={{ pool_name }},next={{ pool_config.next_pool }}
+{%                     else %}
+{{ iprange_str }},name={{ pool_name }}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+{%         endfor %}
+{%     endfor %}
+{% endif %}

@@ -1,0 +1,66 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3753: upgrade to FRR8 and move CLI options to better fit with the new FRR CLI
+
+from vyos.configtree import ConfigTree
+
+def ospf_passive_migration(config, ospf_base):
+    if config.exists(ospf_base):
+        if config.exists(ospf_base + ['passive-interface']):
+            default = False
+            for interface in config.return_values(ospf_base + ['passive-interface']):
+                if interface == 'default':
+                    default = True
+                    continue
+                config.set(ospf_base + ['interface', interface, 'passive'])
+                config.set_tag(ospf_base + ['interface'])
+
+            config.delete(ospf_base + ['passive-interface'])
+            if default:
+                config.set(ospf_base + ['passive-interface'], value='default')
+
+        if config.exists(ospf_base + ['passive-interface-exclude']):
+            for interface in config.return_values(ospf_base + ['passive-interface-exclude']):
+                config.set(ospf_base + ['interface', interface, 'passive', 'disable'])
+                config.set_tag(ospf_base + ['interface'])
+            config.delete(ospf_base + ['passive-interface-exclude'])
+
+ospfv3_base = ['protocols', 'ospfv3']
+
+def migrate(config: ConfigTree) -> None:
+    if config.exists(ospfv3_base):
+        area_base = ospfv3_base + ['area']
+        if config.exists(area_base):
+            for area in config.list_nodes(area_base):
+                if not config.exists(area_base + [area, 'interface']):
+                    continue
+
+                for interface in config.return_values(area_base + [area, 'interface']):
+                    config.set(ospfv3_base + ['interface', interface, 'area'], value=area)
+                    config.set_tag(ospfv3_base + ['interface'])
+
+                config.delete(area_base + [area, 'interface'])
+
+    # Migrate OSPF syntax in default VRF
+    ospf_base = ['protocols', 'ospf']
+    ospf_passive_migration(config, ospf_base)
+
+    vrf_base = ['vrf', 'name']
+    if config.exists(vrf_base):
+        for vrf in config.list_nodes(vrf_base):
+            vrf_ospf_base = vrf_base + [vrf, 'protocols', 'ospf']
+            if config.exists(vrf_ospf_base):
+                ospf_passive_migration(config, vrf_ospf_base)

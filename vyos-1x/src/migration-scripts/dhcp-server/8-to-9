@@ -1,0 +1,47 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3316:
+# - Adjust hostname to have valid FQDN characters only (underscores aren't allowed anymore)
+# - Rename "service dhcp-server shared-network-name ... static-mapping <hostname> mac-address ..."
+#       to "service dhcp-server shared-network-name ... static-mapping <hostname> mac ..."
+
+import re
+from vyos.configtree import ConfigTree
+
+base = ['service', 'dhcp-server', 'shared-network-name']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for network in config.list_nodes(base):
+        # Run this for every specified 'subnet'
+        if config.exists(base + [network, 'subnet']):
+            for subnet in config.list_nodes(base + [network, 'subnet']):
+                base_subnet = base + [network, 'subnet', subnet]
+                if config.exists(base_subnet + ['static-mapping']):
+                    for hostname in config.list_nodes(base_subnet + ['static-mapping']):
+                        base_mapping = base_subnet + ['static-mapping', hostname]
+
+                        # Rename the 'mac-address' node to 'mac'
+                        if config.exists(base_mapping + ['mac-address']):
+                            config.rename(base_mapping + ['mac-address'], 'mac')
+
+                        # Adjust hostname to have valid FQDN characters only
+                        new_hostname = re.sub(r'[^a-zA-Z0-9-.]', '-', hostname)
+                        if new_hostname != hostname:
+                            config.rename(base_mapping, new_hostname)

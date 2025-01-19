@@ -1,0 +1,267 @@
+interfaces {
+    dummy dum0 {
+        address 192.0.2.0/32
+    }
+    ethernet eth0 {
+        duplex auto
+        ip {
+            rip {
+                authentication {
+                    md5 1 {
+                        password VyOSsecure
+                    }
+                }
+                split-horizon {
+                    poison-reverse
+                }
+            }
+        }
+        ipv6 {
+            ripng {
+                split-horizon {
+                    poison-reverse
+                }
+            }
+        }
+        smp-affinity auto
+        speed auto
+        address 172.18.202.10/24
+    }
+    ethernet eth1 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+        vif 20 {
+            ip {
+                rip {
+                    authentication {
+                        plaintext-password VyOSsecure
+                    }
+                    split-horizon {
+                        poison-reverse
+                    }
+                }
+            }
+            ipv6 {
+                ripng {
+                    split-horizon {
+                        disable
+                    }
+                }
+            }
+        }
+        vif-s 200 {
+            ip {
+                rip {
+                    authentication {
+                        md5 1 {
+                            password VyOSsecure
+                        }
+                    }
+                    split-horizon {
+                        disable
+                    }
+                }
+            }
+            ipv6 {
+                ripng {
+                    split-horizon {
+                        poison-reverse
+                    }
+                }
+            }
+            vif-c 2000 {
+                ip {
+                    rip {
+                        authentication {
+                            md5 1 {
+                                password VyOSsecure
+                            }
+                        }
+                    }
+                }
+            }
+            vif-c 3000 {
+                ip {
+                    rip {
+                        split-horizon {
+                            disable
+                        }
+                    }
+                }
+                ipv6 {
+                    ripng {
+                        split-horizon {
+                            poison-reverse
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+policy {
+    access-list6 198 {
+        rule 10 {
+            action permit
+            source {
+                any
+            }
+        }
+    }
+    access-list6 199 {
+        rule 20 {
+            action deny
+            source {
+                any
+            }
+        }
+    }
+    prefix-list6 bar-prefix {
+        rule 200 {
+            action deny
+            prefix 2001:db8::/32
+        }
+    }
+    prefix-list6 foo-prefix {
+        rule 100 {
+            action permit
+            prefix 2001:db8::/32
+        }
+    }
+    route-map FooBar123 {
+        rule 10 {
+            action permit
+        }
+    }
+}
+protocols {
+    rip {
+        default-distance 20
+        default-information {
+            originate
+        }
+        interface eth0
+        interface eth1.20
+        interface eth1.200
+        interface eth1.200.2000
+        interface eth1.200.3000
+        network 192.168.0.0/24
+        redistribute {
+            connected {
+            }
+        }
+    }
+    ripng {
+        aggregate-address 2001:db8:1000::/48
+        default-information {
+            originate
+        }
+        default-metric 8
+        distribute-list {
+            access-list {
+                in 198
+                out 199
+            }
+            interface eth0 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            interface eth1 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            interface eth2 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            prefix-list {
+                in foo-prefix
+                out bar-prefix
+            }
+        }
+        interface eth0
+        interface eth1
+        interface eth2
+        network 2001:db8:1000::/64
+        network 2001:db8:1001::/64
+        network 2001:db8:2000::/64
+        network 2001:db8:2001::/64
+        passive-interface default
+        redistribute {
+            connected {
+                metric 8
+                route-map FooBar123
+            }
+            static {
+                metric 8
+                route-map FooBar123
+            }
+        }
+        route 2001:db8:1000::/64
+    }
+}
+service {
+    ssh {
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@10:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6-S1 */

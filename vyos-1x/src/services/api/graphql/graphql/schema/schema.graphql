@@ -1,0 +1,16 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+directive @compositequery on FIELD_DEFINITION
+directive @compositemutation on FIELD_DEFINITION
+directive @configsessionquery on FIELD_DEFINITION
+directive @configsessionmutation on FIELD_DEFINITION
+directive @genopquery on FIELD_DEFINITION
+directive @genopmutation on FIELD_DEFINITION
+
+scalar Generic
+
+type Query
+type Mutation

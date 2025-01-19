@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vrf">
+        <properties>
+          <help>Show VRF (Virtual Routing and Forwarding) information</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/vrf.py show</command>
+        <children>
+          <leafNode name="vni">
+            <properties>
+              <help>Show information on VRF/VXLAN VNI mapping</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+        </children>
+      </node>
+      <tagNode name="vrf">
+        <properties>
+          <help>Show information on specific VRF instance</help>
+          <completionHelp>
+            <path>vrf name</path>
+          </completionHelp>
+        </properties>
+        <command>${vyos_op_scripts_dir}/vrf.py show --name="$3"</command>
+        <children>
+          <leafNode name="processes">
+            <properties>
+              <help>Shows all process ids associated with VRF</help>
+            </properties>
+            <command>ip vrf pids "$3"</command>
+          </leafNode>
+          <leafNode name="vni">
+            <properties>
+              <help>Show VXLAN VNI association</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

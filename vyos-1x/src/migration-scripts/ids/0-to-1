@@ -1,0 +1,38 @@
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4557: Migrate threshold and add new threshold types
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'ids', 'ddos-protection']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base + ['threshold']):
+        # Nothing to do
+        return
+    else:
+        if config.exists(base + ['threshold', 'fps']):
+            tmp = config.return_value(base + ['threshold', 'fps'])
+            config.delete(base + ['threshold', 'fps'])
+            config.set(base + ['threshold', 'general', 'fps'], value=tmp)
+        if config.exists(base + ['threshold', 'mbps']):
+            tmp = config.return_value(base + ['threshold', 'mbps'])
+            config.delete(base + ['threshold', 'mbps'])
+            config.set(base + ['threshold', 'general', 'mbps'], value=tmp)
+        if config.exists(base + ['threshold', 'pps']):
+            tmp = config.return_value(base + ['threshold', 'pps'])
+            config.delete(base + ['threshold', 'pps'])
+            config.set(base + ['threshold', 'general', 'pps'], value=tmp)

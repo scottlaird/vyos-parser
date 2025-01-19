@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="ipsec">
+        <properties>
+          <help>Generate IPsec related configurations and archives</help>
+        </properties>
+        <children>
+          <node name="profile">
+            <properties>
+              <help>Generate IKEv2 IPSec remote-access VPN profiles</help>
+            </properties>
+            <children>
+              <tagNode name="ios-remote-access">
+                <properties>
+                  <help>Generate iOS profile for specified remote-access connection name</help>
+                  <completionHelp>
+                    <path>vpn ipsec remote-access connection</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="remote">
+                    <properties>
+                      <help>Remote address where the client will connect to</help>
+                      <completionHelp>
+                        <list>&lt;fqdn&gt;</list>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/ikev2_profile_generator.py --os ios --connection "$5" --remote "$7"</command>
+                    <children>
+                      <tagNode name="name">
+                        <properties>
+                          <help>Connection name as seen in the VPN application</help>
+                          <completionHelp>
+                            <list>&lt;name&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/ikev2_profile_generator.py --os ios --connection "$5" --remote "$7" --name "$9"</command>
+                        <children>
+                          <tagNode name="profile">
+                            <properties>
+                              <help>Profile name as seen under system profiles</help>
+                              <completionHelp>
+                                <list>&lt;name&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/ikev2_profile_generator.py --os ios --connection "$5" --remote "$7" --name "$9" --profile "${11}"</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="profile">
+                        <properties>
+                          <help>Profile name as seen under system profiles</help>
+                          <completionHelp>
+                            <list>&lt;name&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/ikev2_profile_generator.py --os ios --connection "$5" --remote "$7" --profile "$9"</command>
+                        <children>
+                          <tagNode name="name">
+                            <properties>
+                              <help>Connection name as seen in the VPN application</help>
+                              <completionHelp>
+                                <list>&lt;name&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/ikev2_profile_generator.py --os ios --connection "$5" --remote "$7" --profile "$9" --name "${11}"</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="windows-remote-access">
+                <properties>
+                  <help>Generate iOS profile for specified remote-access connection name</help>
+                  <completionHelp>
+                    <path>vpn ipsec remote-access connection</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="remote">
+                    <properties>
+                      <help>Remote address where the client will connect to</help>
+                      <completionHelp>
+                        <list>&lt;fqdn&gt;</list>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7"</command>
+                    <children>
+                      <tagNode name="name">
+                        <properties>
+                          <help>Connection name as seen in the VPN application</help>
+                          <completionHelp>
+                            <list>&lt;name&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7" --name "$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

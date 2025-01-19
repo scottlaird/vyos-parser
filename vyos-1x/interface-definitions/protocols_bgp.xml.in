@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py">
+        <properties>
+          <help>Border Gateway Protocol (BGP)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          #include <include/bgp/protocol-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

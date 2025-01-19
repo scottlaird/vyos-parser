@@ -1,0 +1,43 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5762: http: api: smoketests fail as they can not establish IPv6 connection
+#        to uvicorn backend server, always make the UNIX domain socket the
+#        default way of communication
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'https']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Delete "socket" CLI option - we always use UNIX domain sockets for
+    # NGINX <-> API server communication
+    if config.exists(base + ['api', 'socket']):
+        config.delete(base + ['api', 'socket'])
+
+    # There is no need for an API service port, as UNIX domain sockets
+    # are used
+    if config.exists(base + ['api', 'port']):
+        config.delete(base + ['api', 'port'])
+
+    # rename listen-port -> port ver virtual-host
+    if config.exists(base + ['virtual-host']):
+        for vhost in config.list_nodes(base + ['virtual-host']):
+            if config.exists(base + ['virtual-host', vhost, 'listen-port']):
+                config.rename(base + ['virtual-host', vhost, 'listen-port'], 'port')

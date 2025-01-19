@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="hardware">
+        <properties>
+          <help>Show system hardware details</help>
+        </properties>
+        <children>
+          <node name="cpu">
+            <properties>
+              <help>Show CPU informaion</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/cpu.py show</command>
+            <children>
+              <node name="detail">
+                <properties>
+                  <help>Show system CPU details</help>
+                </properties>
+                <command>cat /proc/cpuinfo</command>
+              </node>
+              <node name="summary">
+                <properties>
+                  <help>Show system CPUs summary</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/cpu.py show_summary</command>
+              </node>
+            </children>
+          </node>
+          <node name="dmi">
+            <properties>
+              <help>Show system DMI details</help>
+            </properties>
+            <command>sudo dmidecode</command>
+          </node>
+          <node name="mem">
+            <properties>
+              <help>Show system RAM details</help>
+            </properties>
+            <command>cat /proc/meminfo</command>
+          </node>
+          <node name="pci">
+            <properties>
+              <help>Show system PCI bus details</help>
+            </properties>
+            <command>lspci</command>
+            <children>
+              <node name="detail">
+                <properties>
+                  <help>Show verbose system PCI bus details</help>
+                </properties>
+                <command>lspci -vvv</command>
+              </node>
+            </children>
+          </node>
+          <node name="storage">
+            <properties>
+              <help>Show system storage information</help>
+            </properties>
+            <children>
+              <leafNode name="nvme">
+                <properties>
+                  <help>Show NVMe device information</help>
+                </properties>
+                <command>sudo nvme list</command>
+              </leafNode>
+              <node name="scsi">
+                <properties>
+                  <help>Show SCSI device information</help>
+                </properties>
+                <command>lsscsi</command>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed SCSI device information</help>
+                    </properties>
+                    <command>lsscsi -vvv</command>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="smart">
+                <properties>
+                  <help>Show S.M.A.R.T. device information</help>
+                  <completionHelp>
+                    <script>ls /dev | egrep '([hsv]d[a-z]|nvme[0-9]+n[0-9])$'</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo smartctl -a "/dev/$5" | sed 1,3d</command>
+              </tagNode>
+            </children>
+          </node>
+          <node name="usb">
+            <properties>
+              <help>Show peripherals connected to the USB bus</help>
+            </properties>
+            <command>/usr/bin/lsusb -t</command>
+            <children>
+              <node name="detail">
+                <properties>
+                  <help>Show detailed USB bus information</help>
+                </properties>
+                <command>/usr/bin/lsusb -v</command>
+              </node>
+              <leafNode name="serial">
+                <properties>
+                  <help>Show information about connected USB serial ports</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_usb_serial.py</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

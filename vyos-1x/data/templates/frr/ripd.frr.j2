@@ -1,0 +1,75 @@
+{% from 'frr/distribute_list_macro.j2' import render_distribute_list %}
+{# RIP key-chain definition #}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+{%         if iface_config.authentication.md5 is vyos_defined %}
+key chain {{ iface }}-rip
+{%             for key_id, key_options in iface_config.authentication.md5.items() %}
+ key {{ key_id }}
+{%                 if key_options.password is vyos_defined %}
+  key-string {{ key_options.password }}
+{%                 endif %}
+ exit
+{%             endfor %}
+exit
+{%         endif %}
+{%     endfor %}
+{% endif %}
+!
+{# Interface specific configuration #}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.authentication.plaintext_password is vyos_defined %}
+ ip rip authentication mode text
+ ip rip authentication string {{ iface_config.authentication.plaintext_password }}
+{%         elif iface_config.authentication.md5 is vyos_defined %}
+ ip rip authentication key-chain {{ iface }}-rip
+ ip rip authentication mode md5
+{%         endif %}
+{%         if iface_config.split_horizon.disable is vyos_defined %}
+ no ip rip split-horizon
+{%         endif %}
+{%         if iface_config.split_horizon.poison_reverse is vyos_defined %}
+ ip rip split-horizon poisoned-reverse
+{%         endif %}
+{%         if iface_config.receive.version is vyos_defined %}
+ ip rip receive version {{ iface_config.receive.version }}
+{%         endif %}
+{%         if iface_config.send.version is vyos_defined %}
+ ip rip send version {{ iface_config.send.version }}
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}
+!
+router rip
+{% if default_distance is vyos_defined %}
+ distance {{ default_distance }}
+{% endif %}
+{% if network_distance is vyos_defined %}
+{%     for network, network_config in network_distance.items() %}
+{%         if network_config.distance is vyos_defined %}
+ distance {{ network_config.distance }} {{ network }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if neighbor is vyos_defined %}
+{%     for address in neighbor %}
+ neighbor {{ address }}
+{%     endfor %}
+{% endif %}
+{% if distribute_list is vyos_defined %}
+{{ render_distribute_list(distribute_list) }}
+{% endif %}
+{% include 'frr/rip_ripng.frr.j2' %}
+{% if version is vyos_defined %}
+ version {{ version }}
+{% endif %}
+exit
+!
+{% if route_map is vyos_defined %}
+ip protocol rip route-map {{ route_map }}
+{% endif %}
+!

@@ -1,0 +1,110 @@
+# redefine ip command to use FRR when it is available
+
+# default route distance
+IF_METRIC=${IF_METRIC:-210}
+
+# Check if interface is inside a VRF
+VRF_OPTION=$(/usr/sbin/ip -j -d link show ${interface} | awk '{if(match($0, /.*"master":"(\w+)".*"info_slave_kind":"vrf"/, IFACE_DETAILS)) printf("vrf %s", IFACE_DETAILS[1])}')
+
+# get status of FRR
+function frr_alive () {
+    /usr/lib/frr/watchfrr.sh all_status
+    if [ "$?" -eq "0" ] ; then
+        logmsg info "FRR status: running"
+        return 0
+    else
+        logmsg info "FRR status: not running"
+        return 1
+    fi
+}
+
+# convert ip route command to vtysh
+function iptovtysh () {
+    # prepare variables for vtysh command
+    local VTYSH_ACTION=$3
+    local VTYSH_NETADDR=""
+    local VTYSH_GATEWAY=""
+    local VTYSH_DEV=""
+    local VTYSH_TAG="210"
+    local VTYSH_DISTANCE=$IF_METRIC
+    # convert default route to 0.0.0.0/0
+    if [ "$4" == "default" ] ; then
+        VTYSH_NETADDR="0.0.0.0/0"
+    else
+        VTYSH_NETADDR=$4
+    fi
+    # add /32 to ip addresses without netmasks
+    if [[ ! $VTYSH_NETADDR =~ ^.*/[[:digit:]]+$ ]] ; then
+        VTYSH_NETADDR="$VTYSH_NETADDR/32"
+    fi
+    shift 4
+    # get gateway address
+    if [ "$1" == "via" ] ; then
+        VTYSH_GATEWAY=$2
+        shift 2
+    fi
+    # get device name
+    if [ "$1" == "dev" ]; then
+        VTYSH_DEV=$2
+        shift 2
+    fi
+    # get distance
+    if [ "$1" == "metric" ]; then
+        VTYSH_DISTANCE=$2
+        shift 2
+    fi
+
+    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VRF_OPTION"
+
+    # delete route if the command is "del"
+    if [ "$VTYSH_ACTION" == "del" ] ; then
+        VTYSH_CMD="no $VTYSH_CMD"
+    fi
+    logmsg info "Converted vtysh command: \"$VTYSH_CMD\""
+}
+
+# delete the same route from kernel before adding new one
+function delroute () {
+    logmsg info "Checking if the route presented in kernel: $@ $VRF_OPTION"
+    if /usr/sbin/ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_OPTION\""
+        /usr/sbin/ip route del $@ $VRF_OPTION
+    fi
+}
+
+# try to communicate with vtysh
+function vtysh_conf () {
+    # perform 10 attempts with 1 second delay for retries
+    for i in {1..10} ; do
+        if vtysh  -c "conf t" -c "$1" ; then
+            logmsg info "Command was executed successfully via vtysh: \"$1\""
+            return 0
+        else
+            logmsg info "Failed to send command to vtysh, retrying in 1 second"
+            sleep 1
+        fi
+    done
+    logmsg error "Failed to execute command via vtysh after 10 attempts: \"$1\""
+    return 1
+}
+
+# replace ip command with this wrapper
+function ip () {
+    # pass comand to system `ip` if this is not related to routes change
+    if [ "$2" != "route" ] ; then
+        logmsg info "Passing command to /usr/sbin/ip: \"$@\""
+        /usr/sbin/ip $@
+    else
+        # if we want to work with routes, try to use FRR first
+        if frr_alive ; then
+            delroute ${@:4}
+            iptovtysh $@
+            logmsg info "Sending command to vtysh"
+            vtysh_conf "$VTYSH_CMD"
+        else
+            # add ip route to kernel
+            logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
+            /usr/sbin/ip $@ $VRF_OPTION
+        fi
+    fi
+}

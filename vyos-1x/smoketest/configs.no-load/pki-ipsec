@@ -1,0 +1,148 @@
+interfaces {
+    dummy dum0 {
+        address 172.20.0.1/30
+    }
+    ethernet eth0 {
+        address 192.168.150.1/24
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+        server time3.vyos.net {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+vpn {
+    ipsec {
+        esp-group MyESPGroup {
+            proposal 1 {
+                encryption aes128
+                hash sha1
+            }
+        }
+        ike-group MyIKEGroup {
+            proposal 1 {
+                dh-group 2
+                encryption aes128
+                hash sha1
+            }
+        }
+        ipsec-interfaces {
+            interface eth0
+        }
+        site-to-site {
+            peer 192.168.150.2 {
+                authentication {
+                    mode x509
+                    x509 {
+                        ca-cert-file ovpn_test_ca.pem
+                        cert-file ovpn_test_server.pem
+                        key {
+                            file ovpn_test_server.key
+                        }
+                    }
+                }
+                default-esp-group MyESPGroup
+                ike-group MyIKEGroup
+                local-address 192.168.150.1
+                tunnel 0 {
+                    local {
+                        prefix 172.20.0.0/24
+                    }
+                    remote {
+                        prefix 172.21.0.0/24
+                    }
+                }
+            }
+            peer 192.168.150.3 {
+                authentication {
+                    mode rsa
+                    pre-shared-secret MYSECRETKEY
+                    rsa-key-name peer2
+                }
+                default-esp-group MyESPGroup
+                ike-group MyIKEGroup
+                local-address 192.168.150.1
+                tunnel 0 {
+                    local {
+                        prefix 172.20.0.0/24
+                    }
+                    remote {
+                        prefix 172.22.0.0/24
+                    }
+                }
+            }
+        }
+    }
+    l2tp {
+        remote-access {
+            authentication {
+                local-users {
+                    username alice {
+                        password notsecure
+                    }
+                }
+                mode local
+            }
+            client-ip-pool {
+                start 192.168.255.2
+                stop 192.168.255.254
+            }
+            ipsec-settings {
+                authentication {
+                    mode x509
+                    x509 {
+                        ca-cert-file /config/auth/ovpn_test_ca.pem
+                        server-cert-file /config/auth/ovpn_test_server.pem
+                        server-key-file /config/auth/ovpn_test_server.key
+                    }
+                }
+            }
+            outside-address 192.168.150.1
+        }
+    }
+    rsa-keys {
+        local-key {
+            file /config/auth/ovpn_test_server.key
+        }
+        rsa-key-name peer2 {
+            rsa-key 0sAwEAAbudt5WQZSW2plbixjpgx4yVN/WMHdYRIZhyypJWO4ujQ/UQS9j3oTBgV2+RLtQ0YQ7eocwIfkvJVUnnZVMyZ4asQMOarQgbQ5nFGliCcDOMtNXRxHlMsvmjLx4o6FWbGukwgoxsT2x915n0XMn4XJNNSIEQotxj2GWFhEfBSPHyOM++kODk0lkbE7mLeHMMFq02vQhoczzEPWxjUUoY3jywhmHMfb4PdAKLFyt9x40znmPCYh+NSMQmpBXtD3gjGtX62bgrqKuP3BJU44x1gLlv8rJAJ4SY74YKnFUZ8m5GSbnVapwPOrp65lJZFKOGs2XXjAp5leoR+wmSYyqbDJM=
+        }
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@1:broadcast-relay@1:cluster@1:config-management@1:conntrack@2:conntrack-sync@2:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@6:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:nat66@1:ntp@1:policy@1:pppoe-server@5:pptp@2:qos@1:quagga@9:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrf@2:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.4-rolling-202106290839

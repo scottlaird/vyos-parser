@@ -1,0 +1,21 @@
+[Unit]
+Description=DHCP client on %i
+Documentation=man:dhclient(8)
+StartLimitIntervalSec=0
+After=vyos-router.service
+ConditionPathExists=/run/dhclient/dhclient_%i.conf
+
+[Service]
+Type=exec
+ExecStart=/sbin/dhclient -4 -d $DHCLIENT_OPTS
+ExecStop=/sbin/dhclient -4 -r $DHCLIENT_OPTS
+Restart=always
+RestartPreventExitStatus=
+RestartSec=10
+RuntimeDirectoryPreserve=yes
+TimeoutStopSec=20
+SendSIGKILL=true
+FinalKillSignal=SIGABRT
+
+[Install]
+WantedBy=multi-user.target

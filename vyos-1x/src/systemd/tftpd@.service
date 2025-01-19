@@ -1,0 +1,14 @@
+[Unit]
+Description=TFTP server
+After=vyos-router.service
+RequiresMountsFor=/run
+
+[Service]
+Type=forking
+#NotifyAccess=main
+EnvironmentFile=-/etc/default/tftpd%I
+ExecStart=/bin/sh -c "${VRF_ARGS} /usr/sbin/in.tftpd ${DAEMON_ARGS}"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

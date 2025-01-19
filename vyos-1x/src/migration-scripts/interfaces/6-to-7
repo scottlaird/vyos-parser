@@ -1,0 +1,45 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Remove network provider name from CLI and rather use provider APN from CLI
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    base = ['interfaces', 'wirelessmodem']
+
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # list all individual wwan/wireless modem interfaces
+    for i in config.list_nodes(base):
+        iface = base + [i]
+
+        # only three carries have been supported in the past, thus
+        # this will be fairly simple \o/ - and only one (AT&T) did
+        # configure an APN
+        if config.exists(iface + ['network']):
+            network = config.return_value(iface + ['network'])
+            if network == "att":
+                apn = 'isp.cingular'
+                config.set(iface + ['apn'], value=apn)
+
+            config.delete(iface + ['network'])
+
+        # synchronize DNS configuration with PPPoE interfaces to have a
+        # uniform CLI experience
+        if config.exists(iface + ['no-dns']):
+            config.rename(iface + ['no-dns'], 'no-peer-dns')

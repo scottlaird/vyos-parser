@@ -1,0 +1,30 @@
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4257: Discussion on changing BGP autonomous system number syntax
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    # Check if BGP is even configured. Then check if local-as exists, then add the system-as, then remove the local-as. This is for global configuration.
+    if config.exists(['protocols', 'bgp']):
+        if config.exists(['protocols', 'bgp', 'local-as']):
+            config.rename(['protocols', 'bgp', 'local-as'], 'system-as')
+
+    # Check if vrf names are configured. Then check if local-as exists inside of a name, then add the system-as, then remove the local-as. This is for vrf configuration.
+    if config.exists(['vrf', 'name']):
+        for vrf in config.list_nodes(['vrf', 'name']):
+            if config.exists(['vrf', f'name {vrf}', 'protocols', 'bgp', 'local-as']):
+                config.rename(['vrf', f'name {vrf}', 'protocols', 'bgp', 'local-as'], 'system-as')

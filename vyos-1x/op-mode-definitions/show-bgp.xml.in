@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="bgp">
+        <properties>
+          <help>BGP information</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        <children>
+          <node name="cidr-only">
+            <properties>
+              <help>Display only routes with non-natural netmasks</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/vtysh-generic-wide.xml.i>
+            </children>
+          </node>
+          #include <include/bgp/show-bgp-common.xml.i>
+          <node name="mac">
+            <properties>
+              <help>MAC address</help>
+            </properties>
+            <children>
+              <leafNode name="hash">
+                <properties>
+                  <help>MAC address database</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/bgp/martian-next-hop.xml.i>
+          <leafNode name="memory">
+            <properties>
+              <help>Global BGP memory statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          #include <include/bgp/next-hop.xml.i>
+          <leafNode name="statistics">
+            <properties>
+              <help>BGP RIB advertisement statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          <leafNode name="statistics-all">
+            <properties>
+              <help>Display number of prefixes for all afi/safi</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          #include <include/vni-tagnode-all.xml.i>
+          <tagNode name="vni">
+            <children>
+              <tagNode name="vtep">
+                <properties>
+                  <help>Remote VTEP IP address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </tagNode>
+              <node name="type">
+                <properties>
+                  <help>Display number of prefixes for all afi/safi</help>
+                </properties>
+                <children>
+                  #include <include/bgp/evpn-type-1.xml.i>
+                  #include <include/bgp/evpn-type-2.xml.i>
+                  #include <include/bgp/evpn-type-3.xml.i>
+                  #include <include/bgp/evpn-type-ead.xml.i>
+                  #include <include/bgp/evpn-type-macip.xml.i>
+                  #include <include/bgp/evpn-type-multicast.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <leafNode name="vrf">
+            <properties>
+              <help>Show BGP VRF information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          <tagNode name="vrf">
+            <properties>
+              <help>Show BGP VRF related information</help>
+              <completionHelp>
+                <path>vrf name</path>
+                <list>all</list>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/bgp/show-bgp-common.xml.i>
+              #include <include/bgp/martian-next-hop.xml.i>
+              #include <include/bgp/next-hop.xml.i>
+            </children>
+          </tagNode>
+          #include <include/vtysh-generic-wide.xml.i>
+          <node name="segment-routing">
+            <properties>
+              <help>BGP Segment Routing</help>
+            </properties>
+            <children>
+              <leafNode name="srv6">
+                <properties>
+                  <help>BGP Segment Routing SRv6</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

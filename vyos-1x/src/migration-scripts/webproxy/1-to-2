@@ -1,0 +1,33 @@
+# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# migrate old style `webproxy proxy-bypass 1.2.3.4/24`
+# to new style `webproxy whitelist destination-address 1.2.3.4/24`
+
+from vyos.configtree import ConfigTree
+
+cfg_webproxy_base = ['service', 'webproxy']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(cfg_webproxy_base + ['proxy-bypass']):
+        # Nothing to do
+        return
+
+    bypass_addresses = config.return_values(cfg_webproxy_base + ['proxy-bypass'])
+    # delete old configuration node
+    config.delete(cfg_webproxy_base + ['proxy-bypass'])
+    for bypass_address in bypass_addresses:
+        # add data to new configuration node
+        config.set(cfg_webproxy_base + ['whitelist', 'destination-address'], value=bypass_address, replace=False)
