@@ -1,5 +1,0 @@
-{% if authentication.mode is vyos_defined('local') %}
-chap-secrets
-{% elif authentication.mode is vyos_defined('radius') %}
-radius
-{% endif %}

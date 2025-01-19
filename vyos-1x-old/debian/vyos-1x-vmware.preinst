@@ -1,1 +1,0 @@
-dpkg-divert --package vyos-1x-vmware --add --rename /etc/vmware-tools/tools.conf

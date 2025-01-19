@@ -1,8 +1,0 @@
-#<username>:<group>:<hash>
-{% if username is vyos_defined %}
-{%     for user, user_config in username.items() %}
-{%         if user_config.disable is not vyos_defined %}
-{{ user }}:*:{{ user_config.hash }}
-{%         endif %}
-{%     endfor %}
-{% endif %}

@@ -1,3 +1,0 @@
-[Unit]
-Description=VyOS target
-After=multi-user.target
