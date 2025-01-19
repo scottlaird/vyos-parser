@@ -1,0 +1,53 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - migrate dns-servers node to common name-servers
+# - remove radios req-limit node
+
+from vyos.configtree import ConfigTree
+
+base = ['vpn', 'pptp', 'remote-access']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Migrate IPv4 DNS servers
+    dns_base = base + ['dns-servers']
+    if config.exists(dns_base):
+        for server in ['server-1', 'server-2']:
+          if config.exists(dns_base + [server]):
+            dns = config.return_value(dns_base + [server])
+            config.set(base + ['name-server'], value=dns, replace=False)
+
+        config.delete(dns_base)
+
+    # Migrate IPv4 WINS servers
+    wins_base = base + ['wins-servers']
+    if config.exists(wins_base):
+        for server in ['server-1', 'server-2']:
+          if config.exists(wins_base + [server]):
+            wins = config.return_value(wins_base + [server])
+            config.set(base + ['wins-server'], value=wins, replace=False)
+
+        config.delete(wins_base)
+
+    # Remove RADIUS server req-limit node
+    radius_base = base + ['authentication', 'radius']
+    if config.exists(radius_base):
+        for server in config.list_nodes(radius_base + ['server']):
+            if config.exists(radius_base + ['server', server, 'req-limit']):
+                config.delete(radius_base + ['server', server, 'req-limit'])

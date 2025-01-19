@@ -1,0 +1,53 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3008: move from ntpd to chrony and migrate "system ntp" to "service ntp"
+
+from vyos.configtree import ConfigTree
+
+base_path = ['system', 'ntp']
+new_base_path = ['service', 'ntp']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base_path):
+        # Nothing to do
+        return
+
+    # config.copy does not recursively create a path, so create ['service'] if
+    # it doesn't yet exist, such as for config.boot.default
+    if not config.exists(['service']):
+        config.set(['service'])
+
+    # copy "system ntp" to "service ntp"
+    config.copy(base_path, new_base_path)
+    config.delete(base_path)
+
+    # chrony does not support the preempt option, drop it
+    for server in config.list_nodes(new_base_path + ['server']):
+        server_base =  new_base_path + ['server', server]
+        if config.exists(server_base + ['preempt']):
+            config.delete(server_base + ['preempt'])
+
+    # Rename "allow-clients" -> "allow-client"
+    if config.exists(new_base_path + ['allow-clients']):
+        config.rename(new_base_path + ['allow-clients'], 'allow-client')
+
+    # By default VyOS 1.3 allowed NTP queries for all networks - in chrony we
+    # explicitly disable this behavior and clients need to be specified using the
+    # allow-client CLI option. In order to be fully backwards compatible, we specify
+    # 0.0.0.0/0 and ::/0 as allow networks if not specified otherwise explicitly.
+    if not config.exists(new_base_path + ['allow-client']):
+        config.set(new_base_path + ['allow-client', 'address'], value='0.0.0.0/0', replace=False)
+        config.set(new_base_path + ['allow-client', 'address'], value='::/0', replace=False)

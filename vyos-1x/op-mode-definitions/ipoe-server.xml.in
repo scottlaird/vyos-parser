@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ipoe-server">
+        <properties>
+          <help>IPoE (Internet Protocol over Ethernet) server</help>
+        </properties>
+        <children>
+          <node name="session">
+            <properties>
+              <help>Clear IPoE (Internet Protocol over Ethernet) server session</help>
+            </properties>
+            <children>
+              <tagNode name="username">
+                <properties>
+                  <help>Clear IPoE server session by username</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="username"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="username" --target="$5"</command>
+              </tagNode>
+              <tagNode name="sid">
+                <properties>
+                  <help>Clear IPoE server session by Session ID</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="sid"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="sid" --target="$5"</command>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Clear IPoE server session by interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="ifname"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="if"  --target="$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="ipoe-server">
+        <properties>
+          <help>Show IPoE (Internet Protocol over Ethernet) server status</help>
+        </properties>
+        <children>
+          <leafNode name="sessions">
+            <properties>
+              <help>Show active IPoE server sessions</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/ipoe-control.py --action="show_sessions"</command>
+          </leafNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>Show IPoE server statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/ipoe-control.py --action="show_stat"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <leafNode name="ipoe-server">
+        <properties>
+          <help>Restart IPoE (Internet Protocol over Ethernet) server process</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/ipoe-control.py --action="restart"</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

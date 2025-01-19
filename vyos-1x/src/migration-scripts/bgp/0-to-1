@@ -1,0 +1,40 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3417: migrate BGP tagNode to node as we can only have one BGP process
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    base = ['protocols', 'bgp']
+
+    if not config.exists(base) or not config.is_tag(base):
+        # Nothing to do
+        return
+
+    # Only one BGP process is supported, thus this operation is savea
+    asn = config.list_nodes(base)
+    bgp_base = base + asn
+
+    # We need a temporary copy of the config
+    tmp_base = ['protocols', 'bgp2']
+    config.copy(bgp_base, tmp_base)
+
+    # Now it's save to delete the old configuration
+    config.delete(base)
+
+    # Rename temporary copy to new final config and set new "local-as" option
+    config.rename(tmp_base, 'bgp')
+    config.set(base + ['local-as'], value=asn[0])

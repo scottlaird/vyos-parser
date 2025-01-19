@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="bgp">
+            <properties>
+              <help>Show Border Gateway Protocol (BGP) information</help>
+            </properties>
+            <command>vtysh -c "show ip bgp"</command>
+            <children>
+              #include <include/bgp/show-ip-bgp-common.xml.i>
+              <leafNode name="vrf">
+                <properties>
+                  <help>Show BGP VRF information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Show BGP VRF related information</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                    <list>all</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  #include <include/bgp/show-ip-bgp-common.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

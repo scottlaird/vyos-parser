@@ -1,0 +1,138 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <node name="route">
+            <properties>
+              <help>Show IPv6 routes</help>
+            </properties>
+            <command>vtysh -c "show ipv6 route"</command>
+            <children>
+              #include <include/show-route-bgp.xml.i>
+              <node name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache</help>
+                </properties>
+                <command>ip -s -f inet6 route list cache</command>
+              </node>
+              <tagNode name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list cache $5</command>
+              </tagNode>
+              #include <include/show-route-connected.xml.i>
+              <node name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table</help>
+                </properties>
+                <command>ip -f inet6 route list</command>
+              </node>
+              <tagNode name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list $5</command>
+              </tagNode>
+              #include <include/show-route-isis.xml.i>
+              #include <include/show-route-openfabric.xml.i>
+              #include <include/show-route-kernel.xml.i>
+              #include <include/show-route-ospfv3.xml.i>
+              #include <include/show-route-ripng.xml.i>
+              #include <include/show-route-static.xml.i>
+              #include <include/show-route-table.xml.i>
+              #include <include/show-route-tag.xml.i>
+              <node name="summary">
+                <properties>
+                  <help>Summary of all routes</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6</command>
+                <children>
+                  <tagNode name="table">
+                    <properties>
+                      <help>Summary of routes in a particular table</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6 --table $6</command>
+                  </tagNode>
+                </children>
+              </node>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Show IPv6 routes in VRF</help>
+                  <completionHelp>
+                    <list>all</list>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  <node name="summary">
+                    <properties>
+                      <help>Summary of all routes in the VRF</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6 --vrf $5</command>
+                  </node>
+                  <node name="node.tag">
+                    <properties>
+                      <help>Show IPv6 routes of given address or prefix</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      <node name="longer-prefixes">
+                        <properties>
+                          <help>Show longer prefixes of routes for given prefix</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                      </node>
+                    </children>
+                  </node>
+                  #include <include/show-route-bgp.xml.i>
+                  #include <include/show-route-connected.xml.i>
+                  #include <include/show-route-isis.xml.i>
+                  #include <include/show-route-kernel.xml.i>
+                  #include <include/show-route-ospfv3.xml.i>
+                  #include <include/show-route-ripng.xml.i>
+                  #include <include/show-route-static.xml.i>
+                  #include <include/show-route-supernets-only.xml.i>
+                  #include <include/show-route-table.xml.i>
+                  #include <include/show-route-tag.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="route">
+            <properties>
+              <help>Show IPv6 routes of given address or prefix</help>
+              <completionHelp>
+                <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              <node name="longer-prefixes">
+                <properties>
+                  <help>Show longer prefixes of routes for given prefix</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

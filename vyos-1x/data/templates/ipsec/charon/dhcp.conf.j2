@@ -1,0 +1,20 @@
+dhcp {
+    load = yes
+{% if remote_access.dhcp.interface is vyos_defined %}
+    interface = {{ remote_access.dhcp.interface }}
+{% endif %}
+{% if remote_access.dhcp.server is vyos_defined %}
+    server = {{ remote_access.dhcp.server }}
+{% endif %}
+
+    # Always use the configured server address.
+    # force_server_address = no
+
+    # Derive user-defined MAC address from hash of IKE identity and send client
+    # identity DHCP option.
+    # identity_lease = no
+
+    # Use the DHCP server port (67) as source port when a unicast server address
+    # is configured.
+    # use_server_port = no
+}

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="nhrp">
+            <properties>
+              <help>Clear/Purge NHRP entries</help>
+            </properties>
+            <children>
+              <leafNode name="cache">
+                <properties>
+                  <help>Clear Dynamic cache entries</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Clear Shortcut entries</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 routing information</help>
+        </properties>
+        <children>
+          <node name="nhrp">
+            <properties>
+              <help>Show NHRP (Next Hop Resolution Protocol) information</help>
+            </properties>
+            <children>
+              <leafNode name="cache">
+                <properties>
+                  <help>Show NHRP interface connection information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="nhs">
+                <properties>
+                  <help>Show NHRP tunnel connection information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Show NHRP tunnel connection information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+   </children>
+  </node>
+</interfaceDefinition>

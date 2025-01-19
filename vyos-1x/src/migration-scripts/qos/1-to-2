@@ -1,0 +1,168 @@
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from vyos.base import Warning
+from vyos.configtree import ConfigTree
+from vyos.utils.file import read_file
+
+def bandwidth_percent_to_val(interface, percent) -> int:
+    speed = read_file(f'/sys/class/net/{interface}/speed')
+    if not speed.isnumeric():
+        Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
+        speed = 10
+    speed = int(speed) *1000000 # convert to MBit/s
+    return speed * int(percent) // 100 # integer division
+
+
+def delete_orphaned_interface_policy(config, iftype, ifname, vif=None, vifs=None, vifc=None):
+    """Delete unexpected traffic-policy on interfaces in cases when
+       policy does not exist but inreface has a policy configuration
+       Example T5941:
+         set interfaces bonding bond0 vif 995 traffic-policy
+    """
+    if_path = ['interfaces', iftype, ifname]
+
+    if vif:
+        if_path += ['vif', vif]
+    elif vifs:
+        if_path += ['vif-s', vifs]
+        if vifc:
+            if_path += ['vif-c', vifc]
+
+    if not config.exists(if_path + ['traffic-policy']):
+        return
+
+    config.delete(if_path + ['traffic-policy'])
+
+
+def migrate(config: ConfigTree) -> None:
+    base = ['traffic-policy']
+
+    if not config.exists(base):
+        # Delete orphaned nodes on interfaces T5941
+        for iftype in config.list_nodes(['interfaces']):
+            for ifname in config.list_nodes(['interfaces', iftype]):
+                delete_orphaned_interface_policy(config, iftype, ifname)
+
+                if config.exists(['interfaces', iftype, ifname, 'vif']):
+                    for vif in config.list_nodes(['interfaces', iftype, ifname, 'vif']):
+                        delete_orphaned_interface_policy(config, iftype, ifname, vif=vif)
+
+                if config.exists(['interfaces', iftype, ifname, 'vif-s']):
+                    for vifs in config.list_nodes(['interfaces', iftype, ifname, 'vif-s']):
+                        delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs)
+
+                        if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                            for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                                delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs, vifc=vifc)
+
+        # Nothing to do
+        return
+
+    iface_config = {}
+
+    if config.exists(['interfaces']):
+        def get_qos(config, interface, interface_base):
+            if config.exists(interface_base):
+                tmp = { interface : {} }
+                if config.exists(interface_base + ['in']):
+                    tmp[interface]['ingress'] = config.return_value(interface_base + ['in'])
+                if config.exists(interface_base + ['out']):
+                    tmp[interface]['egress'] = config.return_value(interface_base + ['out'])
+                config.delete(interface_base)
+                return tmp
+            return None
+
+        # Migrate "interface ethernet eth0 traffic-policy in|out" to "qos interface eth0 ingress|egress"
+        for type in config.list_nodes(['interfaces']):
+            for interface in config.list_nodes(['interfaces', type]):
+                interface_base = ['interfaces', type, interface, 'traffic-policy']
+                tmp = get_qos(config, interface, interface_base)
+                if tmp: iface_config.update(tmp)
+
+                vif_path = ['interfaces', type, interface, 'vif']
+                if config.exists(vif_path):
+                    for vif in config.list_nodes(vif_path):
+                        vif_interface_base = vif_path + [vif, 'traffic-policy']
+                        ifname = f'{interface}.{vif}'
+                        tmp = get_qos(config, ifname, vif_interface_base)
+                        if tmp: iface_config.update(tmp)
+
+                vif_s_path = ['interfaces', type, interface, 'vif-s']
+                if config.exists(vif_s_path):
+                    for vif_s in config.list_nodes(vif_s_path):
+                        vif_s_interface_base = vif_s_path + [vif_s, 'traffic-policy']
+                        ifname = f'{interface}.{vif_s}'
+                        tmp = get_qos(config, ifname, vif_s_interface_base)
+                        if tmp: iface_config.update(tmp)
+
+                        # vif-c interfaces MUST be migrated before their parent vif-s
+                        # interface as the migrate_*() functions delete the path!
+                        vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
+                        if config.exists(vif_c_path):
+                            for vif_c in config.list_nodes(vif_c_path):
+                                vif_c_interface_base = vif_c_path + [vif_c, 'traffic-policy']
+                                ifname = f'{interface}.{vif_s}.{vif_c}'
+                                tmp = get_qos(config, ifname, vif_s_interface_base)
+                                if tmp: iface_config.update(tmp)
+
+
+    # Now we have the information which interface uses which QoS policy.
+    # Interface binding will be moved to the qos CLi tree
+    config.set(['qos'])
+    config.copy(base, ['qos', 'policy'])
+    config.delete(base)
+
+    # Now map the interface policy binding to the new CLI syntax
+    if len(iface_config):
+        config.set(['qos', 'interface'])
+        config.set_tag(['qos', 'interface'])
+
+    for interface, interface_config in iface_config.items():
+        config.set(['qos', 'interface', interface])
+        config.set_tag(['qos', 'interface', interface])
+        if 'ingress' in interface_config:
+            config.set(['qos', 'interface', interface, 'ingress'], value=interface_config['ingress'])
+        if 'egress' in interface_config:
+            config.set(['qos', 'interface', interface, 'egress'], value=interface_config['egress'])
+
+    # Remove "burst" CLI node from network emulator
+    netem_base = ['qos', 'policy', 'network-emulator']
+    if config.exists(netem_base):
+        for policy_name in config.list_nodes(netem_base):
+            if config.exists(netem_base + [policy_name, 'burst']):
+                config.delete(netem_base + [policy_name, 'burst'])
+
+    # Change bandwidth unit MBit -> mbit as tc only supports mbit
+    base = ['qos', 'policy']
+    if config.exists(base):
+        for policy_type in config.list_nodes(base):
+            for policy in config.list_nodes(base + [policy_type]):
+                policy_base = base + [policy_type, policy]
+                if config.exists(policy_base + ['bandwidth']):
+                    tmp = config.return_value(policy_base + ['bandwidth'])
+                    config.set(policy_base + ['bandwidth'], value=tmp.lower())
+
+                if config.exists(policy_base + ['class']):
+                    for cls in config.list_nodes(policy_base + ['class']):
+                        cls_base = policy_base + ['class', cls]
+                        if config.exists(cls_base + ['bandwidth']):
+                            tmp = config.return_value(cls_base + ['bandwidth'])
+                            config.set(cls_base + ['bandwidth'], value=tmp.lower())
+
+                if config.exists(policy_base + ['default', 'bandwidth']):
+                    if config.exists(policy_base + ['default', 'bandwidth']):
+                        tmp = config.return_value(policy_base + ['default', 'bandwidth'])
+                        config.set(policy_base + ['default', 'bandwidth'], value=tmp.lower())

@@ -1,0 +1,220 @@
+#!/usr/share/vyos-http-api-tools/bin/python3
+#
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import sys
+import grp
+import json
+import logging
+import signal
+from time import sleep
+
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from uvicorn import Config as UvicornConfig
+from uvicorn import Server as UvicornServer
+
+from vyos.configsession import ConfigSession
+from vyos.defaults import api_config_state
+
+from api.session import SessionState
+from api.rest.models import error
+
+CFG_GROUP = 'vyattacfg'
+
+debug = True
+
+LOG = logging.getLogger('http_api')
+logs_handler = logging.StreamHandler()
+LOG.addHandler(logs_handler)
+
+if debug:
+    LOG.setLevel(logging.DEBUG)
+else:
+    LOG.setLevel(logging.INFO)
+
+
+def load_server_config():
+    with open(api_config_state) as f:
+        config = json.load(f)
+    return config
+
+
+app = FastAPI(debug=True,
+              title="VyOS API",
+              version="0.1.0")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request, exc):
+    return error(400, str(exc.errors()[0]))
+
+
+###
+# Modify uvicorn to allow reloading server within the configsession
+###
+
+server = None
+shutdown = False
+
+
+class ApiServerConfig(UvicornConfig):
+    pass
+
+
+class ApiServer(UvicornServer):
+    def install_signal_handlers(self):
+        pass
+
+
+def reload_handler(signum, frame):
+    # pylint: disable=global-statement
+
+    global server
+    LOG.debug('Reload signal received...')
+    if server is not None:
+        server.handle_exit(signum, frame)
+        server = None
+        LOG.info('Server stopping for reload...')
+    else:
+        LOG.warning('Reload called for non-running server...')
+
+
+def shutdown_handler(signum, frame):
+    # pylint: disable=global-statement
+
+    global shutdown
+    LOG.debug('Shutdown signal received...')
+    server.handle_exit(signum, frame)
+    LOG.info('Server shutdown...')
+    shutdown = True
+
+# end modify uvicorn
+
+
+def flatten_keys(d: dict) -> list[dict]:
+    keys_list = []
+    for el in list(d['keys'].get('id', {})):
+        key = d['keys']['id'][el].get('key', '')
+        if key:
+            keys_list.append({'id': el, 'key': key})
+    return keys_list
+
+
+def regenerate_docs(app: FastAPI) -> None:
+    docs = ('/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc')
+    remove = []
+    for r in app.routes:
+        if r.path in docs:
+            remove.append(r)
+    for r in remove:
+        app.routes.remove(r)
+
+    app.openapi_schema = None
+    app.setup()
+
+
+def initialization(session: SessionState, app: FastAPI = app):
+    # pylint: disable=global-statement,broad-exception-caught,import-outside-toplevel
+
+    global server
+    try:
+        server_config = load_server_config()
+    except Exception as e:
+        LOG.critical(f'Failed to load the HTTP API server config: {e}')
+        sys.exit(1)
+
+    if 'keys' in server_config:
+        session.keys = flatten_keys(server_config)
+
+    rest_config = server_config.get('rest', {})
+    session.debug = bool('debug' in rest_config)
+    session.strict = bool('strict' in rest_config)
+
+    graphql_config = server_config.get('graphql', {})
+    session.origins = graphql_config.get('cors', {}).get('allow_origin', [])
+
+    if 'rest' in server_config:
+        session.rest = True
+    else:
+        session.rest = False
+
+    if 'graphql' in server_config:
+        session.graphql = True
+        if isinstance(server_config['graphql'], dict):
+            if 'introspection' in server_config['graphql']:
+                session.introspection = True
+            else:
+                session.introspection = False
+            # default values if not set explicitly
+            session.auth_type = server_config['graphql']['authentication']['type']
+            session.token_exp = server_config['graphql']['authentication']['expiration']
+            session.secret_len = server_config['graphql']['authentication']['secret_length']
+    else:
+        session.graphql = False
+
+    # pass session state
+    app.state = session
+
+    # add REST routes
+    if session.rest:
+        from api.rest.routers import rest_init
+        rest_init(app)
+    else:
+        from api.rest.routers import rest_clear
+        rest_clear(app)
+
+    # add GraphQL route
+    if session.graphql:
+        from api.graphql.routers import graphql_init
+        graphql_init(app)
+    else:
+        from api.graphql.routers import graphql_clear
+        graphql_clear(app)
+
+    regenerate_docs(app)
+
+    LOG.debug('Active routes are:')
+    for r in app.routes:
+        LOG.debug(f'{r.path}')
+
+    config = ApiServerConfig(app, uds="/run/api.sock", proxy_headers=True)
+    server = ApiServer(config)
+
+
+if __name__ == '__main__':
+    # systemd's user and group options don't work, do it by hand here,
+    # else no one else will be able to commit
+    cfg_group = grp.getgrnam(CFG_GROUP)
+    os.setgid(cfg_group.gr_gid)
+
+    # Need to set file permissions to 775 too so that every vyattacfg group member
+    # has write access to the running config
+    os.umask(0o002)
+
+    signal.signal(signal.SIGHUP, reload_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+
+    session_state = SessionState()
+    session_state.session = ConfigSession(os.getpid())
+
+    while True:
+        LOG.debug('Enter main loop...')
+        if shutdown:
+            break
+        if server is None:
+            initialization(session_state)
+            server.run()
+        sleep(1)

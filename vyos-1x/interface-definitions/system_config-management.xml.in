@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="config-management" owner="${vyos_conf_scripts_dir}/system_config-management.py">
+        <properties>
+          <help>Configuration management settings</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <node name="commit-archive">
+            <properties>
+              <help>Commit archive settings</help>
+            </properties>
+            <children>
+              <leafNode name="location">
+                <properties>
+                  <help>Commit archive location</help>
+                  <valueHelp>
+                    <format>http://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>scp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tftp://&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>git+https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="url --file-transport"/>
+                    <regex>(ssh|git|git\+(\w+)):\/\/.*</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+            </children>
+          </node>
+          <leafNode name="commit-revisions">
+            <properties>
+              <help>Commit revisions</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Number of config backups to keep</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+              <constraintErrorMessage>Number of revisions must be between 0 and 65535</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="commit-confirm">
+            <properties>
+              <help>Commit confirm options</help>
+            </properties>
+            <children>
+              <leafNode name="action">
+                <properties>
+                  <help>Commit confirm revert action</help>
+                  <completionHelp>
+                    <list>reload reboot</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>reload</format>
+                    <description>Reload previous configuration if not confirmed</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>reboot</format>
+                    <description>Reboot to saved configuration if not confirmed</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(reload|reboot)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>reboot</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

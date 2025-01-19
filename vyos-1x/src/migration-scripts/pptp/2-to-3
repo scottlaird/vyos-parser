@@ -1,0 +1,55 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - move all pool to named pools
+#       'start-stop' migrate to namedpool 'default-range-pool'
+#       'default-subnet-pool' is the next pool for 'default-range-pool'
+
+from vyos.configtree import ConfigTree
+from vyos.base import Warning
+
+base = ['vpn', 'pptp', 'remote-access']
+pool_base = base + ['client-ip-pool']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    if not config.exists(pool_base):
+        return
+
+    range_pool_name = 'default-range-pool'
+
+    if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
+        def is_legalrange(ip1: str, ip2: str, mask: str):
+            from ipaddress import IPv4Interface
+            interface1 = IPv4Interface(f'{ip1}/{mask}')
+            interface2 = IPv4Interface(f'{ip2}/{mask}')
+            return interface1.network.network_address == interface2.network.network_address and interface2.ip > interface1.ip
+
+        start_ip = config.return_value(pool_base + ['start'])
+        stop_ip = config.return_value(pool_base + ['stop'])
+        if is_legalrange(start_ip, stop_ip, '24'):
+            ip_range = f'{start_ip}-{stop_ip}'
+            config.set(pool_base + [range_pool_name, 'range'], value=ip_range, replace=False)
+            config.set(base + ['default-pool'], value=range_pool_name)
+        else:
+            Warning(
+                f'PPTP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
+
+        config.delete(pool_base + ['start'])
+        config.delete(pool_base + ['stop'])
+    # format as tag node
+    config.set_tag(pool_base)

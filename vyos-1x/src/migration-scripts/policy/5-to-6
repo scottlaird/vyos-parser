@@ -1,0 +1,42 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5165: Migrate policy local-route rule <tag> destination|source
+
+from vyos.configtree import ConfigTree
+
+base4 = ['policy', 'local-route']
+base6 = ['policy', 'local-route6']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base4) and not config.exists(base6):
+        # Nothing to do
+        return
+
+    # replace 'policy local-route{v6} rule <tag> destination|source <x.x.x.x>'
+    #      => 'policy local-route{v6} rule <tag> destination|source address <x.x.x.x>'
+    for base in [base4, base6]:
+        if config.exists(base + ['rule']):
+            for rule in config.list_nodes(base + ['rule']):
+                dst_path = base + ['rule', rule, 'destination']
+                src_path = base + ['rule', rule, 'source']
+                # Destination
+                if config.exists(dst_path):
+                    for dst_addr in config.return_values(dst_path):
+                        config.set(dst_path + ['address'], value=dst_addr, replace=False)
+                # Source
+                if config.exists(src_path):
+                    for src_addr in config.return_values(src_path):
+                        config.set(src_path + ['address'], value=src_addr, replace=False)

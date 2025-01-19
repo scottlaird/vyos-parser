@@ -1,0 +1,531 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="firewall" owner="${vyos_conf_scripts_dir}/firewall.py">
+    <properties>
+      <priority>489</priority>
+      <help>Firewall</help>
+    </properties>
+    <children>
+      #include <include/firewall/global-options.xml.i>
+      <tagNode name="flowtable">
+        <properties>
+          <help>Flowtable</help>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/generic-interface-multi.xml.i>
+          <leafNode name="offload">
+            <properties>
+              <help>Offloading method</help>
+              <completionHelp>
+                <list>hardware software</list>
+              </completionHelp>
+              <valueHelp>
+                <format>hardware</format>
+                <description>Hardware offload</description>
+              </valueHelp>
+              <valueHelp>
+                <format>software</format>
+                <description>Software offload</description>
+              </valueHelp>
+              <constraint>
+                <regex>(hardware|software)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>software</defaultValue>
+          </leafNode>
+        </children>
+      </tagNode>
+      <node name="group">
+        <properties>
+          <help>Firewall group</help>
+        </properties>
+        <children>
+          <tagNode name="address-group">
+            <properties>
+              <help>Firewall address-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4range</format>
+                    <description>IPv4 range to match (e.g. 10.0.0.1-10.0.0.200)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv4-range"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another address-group</help>
+                  <completionHelp>
+                    <path>firewall group address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="domain-group">
+            <properties>
+              <help>Firewall domain-group</help>
+              <constraint>
+                <regex>[a-zA-Z_][a-zA-Z0-9]?[\w\-\.]*</regex>
+              </constraint>
+              <constraintErrorMessage>Name of domain-group can only contain alphanumeric letters, hyphen, underscores and not start with numeric</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Domain-group member</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Domain address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <node name="dynamic-group">
+            <properties>
+              <help>Firewall dynamic group</help>
+            </properties>
+            <children>
+              <tagNode name="address-group">
+                <properties>
+                  <help>Firewall dynamic address group</help>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="ipv6-address-group">
+                <properties>
+                  <help>Firewall dynamic IPv6 address group</help>
+                  <constraint>
+                    <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="interface-group">
+            <properties>
+              <help>Firewall interface-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-interface-multi.xml.i>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another interface-group</help>
+                  <completionHelp>
+                    <path>firewall group interface-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-address-group">
+            <properties>
+              <help>Firewall ipv6-address-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6range</format>
+                    <description>IPv6 range to match (e.g. 2002::1-2002::ff)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                    <validator name="ipv6-range"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another ipv6-address-group</help>
+                  <completionHelp>
+                    <path>firewall group ipv6-address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-network-group">
+            <properties>
+              <help>Firewall ipv6-network-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="network">
+                <properties>
+                  <help>Network-group member</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another ipv6-network-group</help>
+                  <completionHelp>
+                    <path>firewall group ipv6-network-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="mac-group">
+            <properties>
+              <help>Firewall mac-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="mac-address">
+                <properties>
+                  <help>Mac-group member</help>
+                  <valueHelp>
+                    <format>macaddr</format>
+                    <description>MAC address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another mac-group</help>
+                  <completionHelp>
+                    <path>firewall group mac-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="network-group">
+            <properties>
+              <help>Firewall network-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="network">
+                <properties>
+                  <help>Network-group member</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 Subnet to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another network-group</help>
+                  <completionHelp>
+                    <path>firewall group network-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="port-group">
+            <properties>
+              <help>Firewall port-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="port">
+                <properties>
+                  <help>Port-group member</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Named port (any name in /etc/services, e.g., http)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Numbered port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Numbered port range (e.g. 1001-1050)</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another port-group</help>
+                  <completionHelp>
+                    <path>firewall group port-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="bridge">
+        <properties>
+          <help>Bridge firewall</help>
+        </properties>
+        <children>
+          #include <include/firewall/bridge-hook-forward.xml.i>
+          #include <include/firewall/bridge-hook-input.xml.i>
+          #include <include/firewall/bridge-hook-output.xml.i>
+          #include <include/firewall/bridge-hook-prerouting.xml.i>
+          #include <include/firewall/bridge-custom-name.xml.i>
+        </children>
+      </node>
+      <node name="ipv4">
+        <properties>
+          <help>IPv4 firewall</help>
+        </properties>
+        <children>
+          #include <include/firewall/ipv4-hook-forward.xml.i>
+          #include <include/firewall/ipv4-hook-input.xml.i>
+          #include <include/firewall/ipv4-hook-output.xml.i>
+          #include <include/firewall/ipv4-hook-prerouting.xml.i>
+          #include <include/firewall/ipv4-custom-name.xml.i>
+        </children>
+      </node>
+      <node name="ipv6">
+        <properties>
+          <help>IPv6 firewall</help>
+        </properties>
+        <children>
+          #include <include/firewall/ipv6-hook-forward.xml.i>
+          #include <include/firewall/ipv6-hook-input.xml.i>
+          #include <include/firewall/ipv6-hook-output.xml.i>
+          #include <include/firewall/ipv6-hook-prerouting.xml.i>
+          #include <include/firewall/ipv6-custom-name.xml.i>
+        </children>
+      </node>
+      <tagNode name="zone">
+        <properties>
+          <help>Zone-policy</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Zone name</description>
+          </valueHelp>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/default-log.xml.i>
+          <leafNode name="default-action">
+            <properties>
+              <help>Default-action for traffic coming into this zone</help>
+              <completionHelp>
+                <list>drop reject</list>
+              </completionHelp>
+              <valueHelp>
+                <format>drop</format>
+                <description>Drop silently</description>
+              </valueHelp>
+              <valueHelp>
+                <format>reject</format>
+                <description>Drop and notify source</description>
+              </valueHelp>
+              <constraint>
+                <regex>(drop|reject)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>drop</defaultValue>
+          </leafNode>
+          <tagNode name="from">
+            <properties>
+              <help>Zone from which to filter traffic</help>
+              <completionHelp>
+                <path>firewall zone</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="firewall">
+                <properties>
+                  <help>Firewall options</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv4 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="member">
+            <properties>
+              <help>Interface associated with zone</help>
+            </properties>
+            <children>
+              #include <include/generic-interface-multi.xml.i>
+              <leafNode name="vrf">
+                <properties>
+                  <help>VRF associated with zone</help>
+                  <valueHelp>
+                    <format>vrf</format>
+                    <description>VRF associated with zone</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="intra-zone-filtering">
+            <properties>
+              <help>Intra-zone filtering</help>
+            </properties>
+            <children>
+              <leafNode name="action">
+                <properties>
+                  <help>Action for intra-zone traffic</help>
+                  <completionHelp>
+                    <list>accept drop</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>accept</format>
+                    <description>Accept traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>drop</format>
+                    <description>Drop silently</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(accept|drop)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="firewall">
+                <properties>
+                  <help>Use the specified firewall chain</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv4 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="local-zone">
+            <properties>
+              <help>Zone to be local-zone</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022-2024, VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from os import system
+from vyos.pki import create_private_key
+from vyos.pki import create_certificate_request
+from vyos.pki import create_certificate
+from vyos.pki import create_certificate_revocation_list
+from vyos.pki import create_dh_parameters
+from vyos.pki import encode_certificate
+from vyos.pki import encode_dh_parameters
+from vyos.pki import encode_private_key
+from vyos.utils.file import write_file
+
+subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS'}
+ca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS CA'}
+subca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS SubCA'}
+
+ca_cert = '/config/auth/ovpn_test_ca.pem'
+ca_key = '/config/auth/ovpn_test_ca.key'
+ca_cert_chain = '/config/auth/ovpn_test_chain.pem'
+ca_crl = '/config/auth/ovpn_test_ca.crl'
+subca_cert = '/config/auth/ovpn_test_subca.pem'
+subca_csr = '/tmp/subca.csr'
+subca_key = '/config/auth/ovpn_test_subca.key'
+ssl_cert = '/config/auth/ovpn_test_server.pem'
+ssl_key  = '/config/auth/ovpn_test_server.key'
+dh_pem   = '/config/auth/ovpn_test_dh.pem'
+s2s_key  = '/config/auth/ovpn_test_site2site.key'
+auth_key = '/config/auth/ovpn_test_tls_auth.key'
+
+rpki_ssh_priv_key = """
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEAweDyflDFR4qyEwETbJkZ2ZZc+sJNiDTvYpwGsWIkju49lJSxHe1x
+Kf8FhwfyMu40Snt1yDlRmmmz4CsbLgbuZGMPvXG11e34+C0pSVUvpF6aqRTeLl1pDRK7Rn
+jgm3su+I8SRLQR4qbLG6VXWOFuVpwiqbExLaU0hFYTPNP+dArNpsWEEKsohk6pTXdhg3Vz
+Wp3vCMjl2JTshDa3lD7p2xISSAReEY0fnfEAmQzH4Z6DIwwGdFuMWoQIg+oFBM9ARrO2/F
+IjRsz6AecR/WeU72JEw4aJic1/cAJQA6PiQBHwkuo3Wll1tbpxeRZoB2NQG22ETyJLvhfT
+aooNLT9HpQAAA8joU5dM6FOXTAAAAAdzc2gtcnNhAAABAQDB4PJ+UMVHirITARNsmRnZll
+z6wk2INO9inAaxYiSO7j2UlLEd7XEp/wWHB/Iy7jRKe3XIOVGaabPgKxsuBu5kYw+9cbXV
+7fj4LSlJVS+kXpqpFN4uXWkNErtGeOCbey74jxJEtBHipssbpVdY4W5WnCKpsTEtpTSEVh
+M80/50Cs2mxYQQqyiGTqlNd2GDdXNane8IyOXYlOyENreUPunbEhJIBF4RjR+d8QCZDMfh
+noMjDAZ0W4xahAiD6gUEz0BGs7b8UiNGzPoB5xH9Z5TvYkTDhomJzX9wAlADo+JAEfCS6j
+daWXW1unF5FmgHY1AbbYRPIku+F9Nqig0tP0elAAAAAwEAAQAAAQACkDlUjzfUhtJs6uY5
+WNrdJB5NmHUS+HQzzxFNlhkapK6+wKqI1UNaRUtq6iF7J+gcFf7MK2nXS098BsXguWm8fQ
+zPuemoDvHsQhiaJhyvpSqRUrvPTB/f8t/0AhQiKiJIWgfpTaIw53inAGwjujNNxNm2eafH
+TThhCYxOkRT7rsT6bnSio6yeqPy5QHg7IKFztp5FXDUyiOS3aX3SvzQcDUkMXALdvzX50t
+1XIk+X48Rgkq72dL4VpV2oMNDu3hM6FqBUplf9Mv3s51FNSma/cibCQoVufrIfoqYjkNTj
+IpYFUcq4zZ0/KvgXgzSsy9VN/4TtbalrOuu7X/SHJbvhAAAAgGPFsXgONYQvXxCnK1dIue
+ozgaZg1I/n522E2ZCOXBW4dYJVyNpppwRreDzuFzTDEe061MpNHfScjVBJCCulivFYWscL
+6oaGsryDbFxO3QmB4I98UBqrds2yan9/JGc6EYe299yvaHy7Y64+NC0+fN8H2RAZ61T4w1
+0JrCaJRyvzAAAAgQDvBfuV1U7o9k/fbU+U7W2UYnWblpOZAMfi1XQP6IJJeyWs90PdTdXh
++l0eIQrCawIiRJytNfxMmbD4huwTf77fWiyCcPznmALQ7ex/yJ+W5Z0V4dPGF3h7o1uiS2
+36JhQ7mfcliCkhp/1PIklBIMPcCp0zl+s9wMv2hX7w1Pah9QAAAIEAz6YgU9Xute+J+dBw
+oWxEQ+igR6KE55Um7O9AvSrqnCm9r7lSFsXC2ErYOxoDSJ3yIBEV0b4XAGn6tbbVIs3jS8
+BnLHxclAHQecOx1PGn7PKbnPW0oJRq/X9QCIEelKYvlykpayn7uZooTXqcDaPZxfPpmPdy
+e8chVJvdygi7kPEAAAAMY3BvQExSMS53dWUzAQIDBAUGBw==
+-----END OPENSSH PRIVATE KEY-----
+"""
+
+rpki_ssh_pub_key = """
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDB4PJ+UMVHirITARNsmRnZllz6wk2INO9inAaxYiSO7j2UlLEd7XEp/wWHB/Iy7jRKe3XIOVGaabPgKxsuBu5kYw+9cbXV7fj4LSlJVS+kXpqpFN4uXWkNErtGeOCbey74jxJEtBHipssbpVdY4W5WnCKpsTEtpTSEVhM80/50Cs2mxYQQqyiGTqlNd2GDdXNane8IyOXYlOyENreUPunbEhJIBF4RjR+d8QCZDMfhnoMjDAZ0W4xahAiD6gUEz0BGs7b8UiNGzPoB5xH9Z5TvYkTDhomJzX9wAlADo+JAEfCS6jdaWXW1unF5FmgHY1AbbYRPIku+F9Nqig0tP0el vyos@vyos
+"""
+
+def create_cert(subject, cert_path, key_path, sign_by=None, sign_by_key=None, ca=False, sub_ca=False):
+    priv_key = create_private_key('rsa', 2048)
+    cert_req = create_certificate_request(subject, priv_key)
+    cert = create_certificate(
+        cert_req,
+        sign_by if sign_by else cert_req,
+        sign_by_key if sign_by_key else priv_key,
+        is_ca=ca, is_sub_ca=sub_ca)
+
+    with open(cert_path, 'w') as f:
+        f.write(encode_certificate(cert))
+
+    with open(key_path, 'w') as f:
+        f.write(encode_private_key(priv_key))
+
+    return cert, priv_key
+
+def create_empty_crl(crl_path, sign_by, sign_by_key):
+    crl = create_certificate_revocation_list(sign_by, sign_by_key, [1])
+
+    with open(crl_path, 'w') as f:
+        f.write(encode_certificate(crl))
+
+    return crl
+
+if __name__ == '__main__':
+    # Create Root CA
+    ca_cert_obj, ca_key_obj = create_cert(ca_subject, ca_cert, ca_key, ca=True)
+
+    # Create Empty CRL
+    create_empty_crl(ca_crl, ca_cert_obj, ca_key_obj)
+
+    # Create Intermediate CA
+    subca_cert_obj, subca_key_obj = create_cert(
+        subca_subject, subca_cert, subca_key,
+        sign_by=ca_cert_obj, sign_by_key=ca_key_obj,
+        ca=True, sub_ca=True)
+
+    # Create Chain
+    with open(ca_cert_chain, 'w') as f:
+        f.write(encode_certificate(subca_cert_obj) + "\n")
+        f.write(encode_certificate(ca_cert_obj) + "\n")
+
+    # Create Server Cert
+    create_cert(subject, ssl_cert, ssl_key, sign_by=subca_cert_obj, sign_by_key=subca_key_obj)
+
+    # Create DH params
+    dh_params = create_dh_parameters()
+
+    with open(dh_pem, 'w') as f:
+        f.write(encode_dh_parameters(dh_params))
+
+    # OpenVPN S2S Key
+    system(f'openvpn --genkey secret {s2s_key}')
+
+    # OpenVPN Auth Key
+    system(f'openvpn --genkey secret {auth_key}')
+
+    write_file('/config/id_rsa', rpki_ssh_priv_key.strip())
+    write_file('/config/id_rsa.pub', rpki_ssh_pub_key.strip())
+    write_file('/config/known-hosts-file', '')

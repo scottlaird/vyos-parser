@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="dummy">
+            <properties>
+              <help>Show specified Dummy interface information</help>
+              <completionHelp>
+                <path>interfaces dummy</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=dummy</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified dummy interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=dummy</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="dummy">
+            <properties>
+              <help>Show Dummy interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=dummy</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed dummy interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=dummy</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

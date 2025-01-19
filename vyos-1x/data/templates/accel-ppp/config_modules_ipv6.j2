@@ -1,0 +1,5 @@
+{% if ppp_options.ipv6 is vyos_defined and ppp_options.ipv6 is not vyos_defined('deny') %}
+ipv6pool
+ipv6_nd
+ipv6_dhcp
+{% endif %}

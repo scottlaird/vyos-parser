@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reboot">
+    <properties>
+      <help>Reboot the system</help>
+    </properties>
+    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --reboot</command>
+    <children>
+      <leafNode name="now">
+        <properties>
+          <help>Reboot the system without confirmation</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot</command>
+      </leafNode>
+      <leafNode name="cancel">
+        <properties>
+          <help>Cancel a pending reboot</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --cancel</command>
+      </leafNode>
+      <tagNode name="in">
+        <properties>
+          <help>Reboot in X minutes</help>
+          <completionHelp>
+            <list>&lt;Minutes&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot-in $3 $4</command>
+      </tagNode>
+      <tagNode name="at">
+        <properties>
+          <help>Reboot at a specific time</help>
+          <completionHelp>
+            <list>&lt;HH:MM&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3</command>
+        <children>
+          <tagNode name="date">
+            <properties>
+              <help>Reboot at a specific date</help>
+              <completionHelp>
+                <list>&lt;DD/MM/YYYY&gt; &lt;DD.MM.YYYY&gt; &lt;DD:MM:YYYY&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3 $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

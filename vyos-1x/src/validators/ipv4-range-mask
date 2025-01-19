@@ -1,0 +1,27 @@
+#!/bin/bash
+
+error_exit() {
+  echo "Error: $1 is not a valid IPv4 address range or these IPs are not under /$2"
+  exit 1
+}
+
+# Check if address range is under the same netmask
+# -m - mask
+# -r - IP range in format x.x.x.x-y.y.y.y
+while getopts m:r: flag
+do
+    case "${flag}" in
+        m) mask=${OPTARG};;
+        r) range=${OPTARG}
+    esac
+done
+
+if [[ "${range}" =~ "-" ]]&&[[ ! -z ${mask} ]]; then
+  ipaddrcheck --range-prefix-length ${mask} --is-ipv4-range ${range}
+  if [ $? -gt 0 ]; then
+    error_exit ${range} ${mask}
+  fi
+  exit 0
+fi
+
+error_exit ${range} ${mask}

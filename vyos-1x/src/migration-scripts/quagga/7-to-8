@@ -1,0 +1,42 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - T3391: Migrate "maximum-paths" setting from "protocols bgp asn maximum-paths"
+#   under the IPv4 address-family tree. Reason is we currently have no way in
+#   configuring this for IPv6 address-family. This mimics the FRR configuration.
+
+from vyos.configtree import ConfigTree
+
+base = ['protocols', 'bgp']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Check if BGP is actually configured and obtain the ASN
+    asn_list = config.list_nodes(base)
+    if asn_list:
+        # There's always just one BGP node, if any
+        bgp_base = base + [asn_list[0]]
+
+        maximum_paths = bgp_base + ['maximum-paths']
+        if config.exists(maximum_paths):
+            for bgp_type in ['ebgp', 'ibgp']:
+                if config.exists(maximum_paths + [bgp_type]):
+                    new_base =  bgp_base + ['address-family', 'ipv4-unicast', 'maximum-paths']
+                    config.set(new_base)
+                    config.copy(maximum_paths + [bgp_type], new_base + [bgp_type])
+            config.delete(maximum_paths)

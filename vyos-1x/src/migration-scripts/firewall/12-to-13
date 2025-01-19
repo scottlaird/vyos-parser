@@ -1,0 +1,69 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5729: Switch to valueless whenever is possible.
+# From
+    # set firewall ... rule <rule> log enable
+    # set firewall ... rule <rule> state <state> enable
+    # set firewall ... rule <rule> log disable
+    # set firewall ... rule <rule> state <state> disable
+# To
+    # set firewall ... rule <rule> log
+    # set firewall ... rule <rule> state <state>
+    # Remove command if log=disable or <state>=disable
+
+from vyos.configtree import ConfigTree
+
+base = ['firewall']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # State Policy logs:
+    if config.exists(base + ['global-options', 'state-policy']):
+        for state in config.list_nodes(base + ['global-options', 'state-policy']):
+            if config.exists(base + ['global-options', 'state-policy', state, 'log']):
+                log_value = config.return_value(base + ['global-options', 'state-policy', state, 'log'])
+                config.delete(base + ['global-options', 'state-policy', state, 'log'])
+                if log_value == 'enable':
+                    config.set(base + ['global-options', 'state-policy', state, 'log'])
+
+    for family in ['ipv4', 'ipv6', 'bridge']:
+        if config.exists(base + [family]):
+            for hook in ['forward', 'input', 'output', 'name']:
+                if config.exists(base + [family, hook]):
+                    for priority in config.list_nodes(base + [family, hook]):
+                        if config.exists(base + [family, hook, priority, 'rule']):
+                            for rule in config.list_nodes(base + [family, hook, priority, 'rule']):
+                                # Log
+                                if config.exists(base + [family, hook, priority, 'rule', rule, 'log']):
+                                    log_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'log'])
+                                    config.delete(base + [family, hook, priority, 'rule', rule, 'log'])
+                                    if log_value == 'enable':
+                                        config.set(base + [family, hook, priority, 'rule', rule, 'log'])
+                                # State
+                                if config.exists(base + [family, hook, priority, 'rule', rule, 'state']):
+                                    flag_enable = 'False'
+                                    for state in ['established', 'invalid', 'new', 'related']:
+                                        if config.exists(base + [family, hook, priority, 'rule', rule, 'state', state]):
+                                            state_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'state', state])
+                                            config.delete(base + [family, hook, priority, 'rule', rule, 'state', state])
+                                            if state_value == 'enable':
+                                                config.set(base + [family, hook, priority, 'rule', rule, 'state'], value=state, replace=False)
+                                                flag_enable = 'True'
+                                    if flag_enable == 'False':
+                                        config.delete(base + [family, hook, priority, 'rule', rule, 'state'])

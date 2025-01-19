@@ -1,0 +1,30 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5877: migrate 'system domain-search domain' to 'system domain-search'
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'domain-search']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    if config.exists(base + ['domain']):
+        entries = config.return_values(base + ['domain'])
+        config.delete(base + ['domain'])
+        for entry in entries:
+            config.set(base, value=entry, replace=False)

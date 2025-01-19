@@ -1,0 +1,41 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# A VTI interface also requires an IPSec configuration - VyOS 1.2 supported
+# having a VTI interface in the CLI but no IPSec configuration - drop VTI
+# configuration if this is the case for VyOS 1.4
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    base = ['interfaces', 'vti']
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    ipsec_base = ['vpn', 'ipsec', 'site-to-site', 'peer']
+    for interface in config.list_nodes(base):
+        found = False
+        if config.exists(ipsec_base):
+            for peer in config.list_nodes(ipsec_base):
+                if config.exists(ipsec_base + [peer, 'vti', 'bind']):
+                    tmp = config.return_value(ipsec_base + [peer, 'vti', 'bind'])
+                    if tmp == interface:
+                        # Interface was found and we no longer need to search
+                        # for it in our IPSec peers
+                        found = True
+                        break
+        if not found:
+            config.delete(base + [interface])

@@ -1,0 +1,93 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - migrate relative path SSL certificate to absolute path, as certs are only
+#   allowed to stored in /config/user-data/sstp/ this is pretty straight
+#   forward move. Delete certificates from source directory
+
+import os
+
+from shutil import copy2
+from stat import S_IRUSR, S_IWUSR, S_IRGRP, S_IROTH
+from vyos.configtree import ConfigTree
+
+base_path = ['vpn', 'sstp', 'ssl']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base_path):
+        # Nothing to do
+        return
+
+    cert_path_old ='/config/user-data/sstp/'
+    cert_path_new ='/config/auth/sstp/'
+
+    if not os.path.isdir(cert_path_new):
+        os.mkdir(cert_path_new)
+
+    #
+    # migrate ca-cert-file to new path
+    if config.exists(base_path + ['ca-cert-file']):
+        tmp = config.return_value(base_path + ['ca-cert-file'])
+        cert_old = cert_path_old + tmp
+        cert_new = cert_path_new + tmp
+
+        if os.path.isfile(cert_old):
+            # adjust file permissions on source file,
+            # permissions will be copied by copy2()
+            os.chmod(cert_old, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+            copy2(cert_old, cert_path_new)
+            # delete old certificate file
+            os.unlink(cert_old)
+
+        config.set(base_path + ['ca-cert-file'], value=cert_new, replace=True)
+
+    #
+    # migrate cert-file to new path
+    if config.exists(base_path + ['cert-file']):
+        tmp = config.return_value(base_path + ['cert-file'])
+        cert_old = cert_path_old + tmp
+        cert_new = cert_path_new + tmp
+
+        if os.path.isfile(cert_old):
+            # adjust file permissions on source file,
+            # permissions will be copied by copy2()
+            os.chmod(cert_old, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+            copy2(cert_old, cert_path_new)
+            # delete old certificate file
+            os.unlink(cert_old)
+
+        config.set(base_path + ['cert-file'], value=cert_new, replace=True)
+
+    #
+    # migrate key-file to new path
+    if config.exists(base_path + ['key-file']):
+        tmp = config.return_value(base_path + ['key-file'])
+        cert_old = cert_path_old + tmp
+        cert_new = cert_path_new + tmp
+
+        if os.path.isfile(cert_old):
+            # adjust file permissions on source file,
+            # permissions will be copied by copy2()
+            os.chmod(cert_old, S_IRUSR | S_IWUSR)
+            copy2(cert_old, cert_path_new)
+            # delete old certificate file
+            os.unlink(cert_old)
+
+        config.set(base_path + ['key-file'], value=cert_new, replace=True)
+
+    #
+    # check if old certificate directory exists but is empty
+    if os.path.isdir(cert_path_old) and not os.listdir(cert_path_old):
+        os.rmdir(cert_path_old)

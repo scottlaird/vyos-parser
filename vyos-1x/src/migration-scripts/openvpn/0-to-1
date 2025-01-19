@@ -1,0 +1,43 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Removes outdated ciphers (DES and Blowfish) from OpenVPN configs
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['interfaces', 'openvpn']):
+        # Nothing to do
+        return
+
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    for	i in ovpn_intfs:
+        # Remove DES and Blowfish from 'encryption cipher'
+        cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'cipher']
+        if config.exists(cipher_path):
+            cipher = config.return_value(cipher_path)
+            if cipher in ['des', 'bf128', 'bf256']:
+                config.delete(cipher_path)
+
+        ncp_cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers']
+        if config.exists(ncp_cipher_path):
+            ncp_ciphers = config.return_values(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'])
+            if 'des' in ncp_ciphers:
+                config.delete_value(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'], 'des')
+
+        # Clean up the encryption subtree if the migration procedure left it empty
+        if config.exists(['interfaces', 'openvpn', i, 'encryption']) and \
+           (config.list_nodes(['interfaces', 'openvpn', i, 'encryption']) == []):
+            config.delete(['interfaces', 'openvpn', i, 'encryption'])

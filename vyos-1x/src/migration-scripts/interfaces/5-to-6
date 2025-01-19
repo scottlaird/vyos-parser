@@ -1,0 +1,114 @@
+# Copyright 202-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Migrate IPv6 router advertisments from a nested interface configuration to
+# a denested "service router-advert"
+
+from vyos.configtree import ConfigTree
+
+def copy_rtradv(c, old_base, interface):
+    base = ['service', 'router-advert', 'interface']
+
+    if c.exists(old_base):
+        if not c.exists(base):
+            c.set(base)
+            c.set_tag(base)
+
+        # take the old node as a whole and copy it to new new path,
+        # additional migrations will be done afterwards
+        new_base = base + [interface]
+        c.copy(old_base, new_base)
+        c.delete(old_base)
+
+        # cur-hop-limit has been renamed to hop-limit
+        if c.exists(new_base + ['cur-hop-limit']):
+            c.rename(new_base + ['cur-hop-limit'], 'hop-limit')
+
+        bool_cleanup = ['managed-flag', 'other-config-flag']
+        for bool in bool_cleanup:
+            if c.exists(new_base + [bool]):
+                tmp = c.return_value(new_base + [bool])
+                c.delete(new_base + [bool])
+                if tmp == 'true':
+                    c.set(new_base + [bool])
+
+        # max/min interval moved to subnode
+        intervals = ['max-interval', 'min-interval']
+        for interval in intervals:
+            if c.exists(new_base + [interval]):
+                tmp = c.return_value(new_base + [interval])
+                c.delete(new_base + [interval])
+                min_max = interval.split('-')[0]
+                c.set(new_base + ['interval', min_max], value=tmp)
+
+        # cleanup boolean nodes in individual route
+        route_base = new_base + ['route']
+        if c.exists(route_base):
+            for route in config.list_nodes(route_base):
+                if c.exists(route_base + [route, 'remove-route']):
+                    tmp = c.return_value(route_base + [route, 'remove-route'])
+                    c.delete(route_base + [route, 'remove-route'])
+                    if tmp == 'false':
+                       c.set(route_base + [route, 'no-remove-route'])
+
+        # cleanup boolean nodes in individual prefix
+        prefix_base = new_base + ['prefix']
+        if c.exists(prefix_base):
+            for prefix in config.list_nodes(prefix_base):
+                if c.exists(prefix_base + [prefix, 'autonomous-flag']):
+                    tmp = c.return_value(prefix_base + [prefix, 'autonomous-flag'])
+                    c.delete(prefix_base + [prefix, 'autonomous-flag'])
+                    if tmp == 'false':
+                        c.set(prefix_base + [prefix, 'no-autonomous-flag'])
+
+                if c.exists(prefix_base + [prefix, 'on-link-flag']):
+                    tmp = c.return_value(prefix_base + [prefix, 'on-link-flag'])
+                    c.delete(prefix_base + [prefix, 'on-link-flag'])
+                    if tmp == 'true':
+                        c.set(prefix_base + [prefix, 'on-link-flag'])
+
+        # router advertisement can be individually disabled per interface
+        # the node has been renamed from send-advert {true | false} to no-send-advert
+        if c.exists(new_base + ['send-advert']):
+            tmp = c.return_value(new_base + ['send-advert'])
+            c.delete(new_base + ['send-advert'])
+            if tmp == 'false':
+                c.set(new_base + ['no-send-advert'])
+
+        # link-mtu advertisement was formerly disabled by setting its value to 0
+        # ... this makes less sense - if it should not be send, just do not
+        # configure it
+        if c.exists(new_base + ['link-mtu']):
+            tmp = c.return_value(new_base + ['link-mtu'])
+            if tmp == '0':
+                c.delete(new_base + ['link-mtu'])
+
+def migrate(config: ConfigTree) -> None:
+    # list all individual interface types like dummy, ethernet and so on
+    for if_type in config.list_nodes(['interfaces']):
+        base_if_type = ['interfaces', if_type]
+
+        # for every individual interface we need to check if there is an
+        # ipv6 ra configured ... and also for every VIF (VLAN) interface
+        for intf in config.list_nodes(base_if_type):
+            old_base = base_if_type + [intf, 'ipv6', 'router-advert']
+            copy_rtradv(config, old_base, intf)
+
+            vif_base = base_if_type + [intf, 'vif']
+            if config.exists(vif_base):
+                for vif in config.list_nodes(vif_base):
+                    old_base = vif_base + [vif, 'ipv6', 'router-advert']
+                    vlan_name = f'{intf}.{vif}'
+                    copy_rtradv(config, old_base, vlan_name)

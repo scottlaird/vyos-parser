@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_interfaces"
+
+if ! { [ -f $DHCP_HOOK_IFLIST ] && grep -qw $interface $DHCP_HOOK_IFLIST; }; then
+    return 0
+fi
+
+# Re-generate the config on the following events:
+# - BOUND: always re-generate
+# - RENEW: re-generate if the IP address changed
+# - REBIND: re-generate if the IP address changed
+if [ "$reason" == "RENEW" ] || [ "$reason" == "REBIND" ]; then
+    if [ "$old_ip_address" == "$new_ip_address" ]; then
+        return 0
+    fi
+elif [ "$reason" != "BOUND" ]; then
+    return 0
+fi
+
+# Best effort wait for any active commit to finish
+sudo python3 - <<PYEND
+from vyos.utils.commit import wait_for_commit_lock
+
+if __name__ == '__main__':
+    wait_for_commit_lock()
+    exit(0)
+PYEND
+
+# Now re-generate the config
+sudo /usr/libexec/vyos/conf_mode/vpn_ipsec.py

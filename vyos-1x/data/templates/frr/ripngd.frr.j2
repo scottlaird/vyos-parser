@@ -1,0 +1,31 @@
+{% from 'frr/ipv6_distribute_list_macro.j2' import render_ipv6_distribute_list %}
+{# Interface specific configuration #}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.split_horizon.disable is vyos_defined %}
+ no ipv6 rip split-horizon
+{%         endif %}
+{%         if iface_config.split_horizon.poison_reverse is vyos_defined %}
+ ipv6 rip split-horizon poisoned-reverse
+{%         endif %}
+exit
+{%     endfor %}
+{% endif %}
+!
+router ripng
+{% if aggregate_address is vyos_defined %}
+{%     for prefix in aggregate_address %}
+ aggregate-address {{ prefix }}
+{%     endfor %}
+{% endif %}
+{% if distribute_list is vyos_defined %}
+{{ render_ipv6_distribute_list(distribute_list) }}
+{% endif %}
+{% include 'frr/rip_ripng.frr.j2' %}
+exit
+!
+{% if route_map is vyos_defined %}
+ipv6 protocol ripng route-map {{ route_map }}
+{% endif %}
+!

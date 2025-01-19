@@ -1,0 +1,43 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3631: route-map: migrate "set extcommunity-rt" and "set extcommunity-soo"
+#        to "set extcommunity rt|soo" to match FRR syntax
+
+from vyos.configtree import ConfigTree
+
+base = ['policy', 'route-map']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for route_map in config.list_nodes(base):
+        if not config.exists(base + [route_map, 'rule']):
+            continue
+        for rule in config.list_nodes(base + [route_map, 'rule']):
+            base_rule = base + [route_map, 'rule', rule]
+
+            if config.exists(base_rule + ['set', 'extcommunity-rt']):
+                tmp = config.return_value(base_rule + ['set', 'extcommunity-rt'])
+                config.delete(base_rule + ['set', 'extcommunity-rt'])
+                config.set(base_rule + ['set', 'extcommunity', 'rt'], value=tmp)
+
+
+            if config.exists(base_rule + ['set', 'extcommunity-soo']):
+                tmp = config.return_value(base_rule + ['set', 'extcommunity-soo'])
+                config.delete(base_rule + ['set', 'extcommunity-soo'])
+                config.set(base_rule + ['set', 'extcommunity', 'soo'], value=tmp)

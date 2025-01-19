@@ -1,0 +1,38 @@
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from vyos.configtree import ConfigTree
+
+config_base = ['service', 'snmp', 'v3']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(config_base):
+        # Nothing to do
+        return
+
+    # we no longer support a per trap target engine ID (https://vyos.dev/T818)
+    if config.exists(config_base + ['v3', 'trap-target']):
+        for target in config.list_nodes(config_base + ['v3', 'trap-target']):
+            config.delete(config_base + ['v3', 'trap-target', target, 'engineid'])
+
+    # we no longer support a per user engine ID (https://vyos.dev/T818)
+    if config.exists(config_base + ['v3', 'user']):
+        for user in config.list_nodes(config_base + ['v3', 'user']):
+            config.delete(config_base + ['v3', 'user', user, 'engineid'])
+
+    # we drop TSM support as there seem to be no users and this code is untested
+    # https://vyos.dev/T1769
+    if config.exists(config_base + ['v3', 'tsm']):
+        config.delete(config_base + ['v3', 'tsm'])
