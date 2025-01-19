@@ -1,9 +1,0 @@
-network:
-  version: 2
-  ethernets:
-{% for iface in ifaces_list %}
-    {{ iface['name'] }}:
-      dhcp4: true
-      match:
-        macaddress: "{{ iface['mac'] }}"
-{% endfor %}

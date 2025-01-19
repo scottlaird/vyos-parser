@@ -1,5 +1,0 @@
-{% if interface is vyos_defined %}
-charon {
-    interfaces_use = {{ ', '.join(interface) }}
-}
-{% endif %}
