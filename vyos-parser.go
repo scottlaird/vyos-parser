@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"encoding/json"
 	"fmt"
-	"github.com/scottlaird/vyos-parser/xmlreader"
+	"github.com/scottlaird/vyos-parser/configmodel"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,7 +14,7 @@ func main() {
 	dir := "interface-definitions"
 	files, _ := ioutil.ReadDir(dir)
 
-	id := &xmlreader.InterfaceDefinition{}
+	id := &configmodel.InterfaceDefinition{}
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -24,7 +24,7 @@ func main() {
 				panic(err)
 			}
 
-			interfacedef := &xmlreader.InterfaceDefinition{}
+			interfacedef := &configmodel.InterfaceDefinition{}
 
 			err = xml.Unmarshal(b, &interfacedef)
 			if err != nil {
