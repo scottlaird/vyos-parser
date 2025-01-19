@@ -1,11 +1,7 @@
 package xmlreader
 
 import (
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 // spaces returns a string with a specific number of space characters,
@@ -61,7 +57,14 @@ OUTER:
 // `ConfigDefinition` or similar, but the XML tag that they use is
 // `InterfaceDefinition` so I'm sticking with that.
 type InterfaceDefinition struct {
-	Nodes []*Node `xml:"node"`
+	Nodes []*Node `xml:"node", json:"Node"`
+}
+
+// Recursively fix field definitions
+func (id *InterfaceDefinition) Fixup() {
+	for _, n := range id.Nodes {
+		n.Fixup()
+	}
 }
 
 // Print an InterfaceDefinition
@@ -83,10 +86,18 @@ func (id *InterfaceDefinition) Merge(id2 *InterfaceDefinition) {
 // `interface` is a Node, while `ethernet eth0` is a TagNode and
 // `address dhcp` is a LeafNode.
 type Node struct {
-	Name       string          `xml:"name,attr"`
-	Owner      string          `xml:"owner,attr"`
-	Properties *NodeProperties `xml:"properties"`
-	Children   *NodeChildren   `xml:"children"`
+	Name       string          `xml:"name,attr" json:"name"`
+	Owner      string          `xml:"owner,attr" json:"-"`
+	Properties *NodeProperties `xml:"properties" json:"-"`
+	Children   *NodeChildren   `xml:"children" json:"children"`
+}
+
+func (n *Node) Fixup() {
+	// Nothing to do for Node yet.
+	
+	if n.Children != nil {
+		n.Children.Fixup()
+	}
 }
 
 func (n *Node) GetName() string { return n.Name }
@@ -108,14 +119,14 @@ func (n *Node) Merge(n2 *Node) {
 // when a Node (or generally a LeafNode) take either multiple values
 // or no values at all.
 type NodeProperties struct {
-	DefaultValue   string                    `xml:"defaultValue"`
-	Help           []*PropertyHelp           `xml:"help"`
-	CompletionHelp []*PropertyCompletionHelp `xml:"completionHelp"`
-	ValueHelp      []*PropertyValueHelp      `xml:"valueHelp"`
-	Constraint     []*PropertyConstraint     `xml:"constraint"`
+	DefaultValue   string                    `xml:"defaultValue" json:"-"`
+	Help           []*PropertyHelp           `xml:"help" json:"-"`
+	CompletionHelp []*PropertyCompletionHelp `xml:"completionHelp" json:"-"`
+	ValueHelp      []*PropertyValueHelp      `xml:"valueHelp" json:"-"`
+	Constraint     []*PropertyConstraint     `xml:"constraint" json:"-"`
 	//ConstraintErrorMessage string `xml:"constraintErrorMessage,chardata"`
-	Multi     *bool `xml:"multi"` // interface_ethernet has `<multi/>`, not sure what to do with it yet.
-	Valueless *bool `xml:"valueless"`
+	Multi     *bool `xml:"multi" json:"multi,omitempty"`
+	Valueless *bool `xml:"valueless" json:"valueless,omitempty"`
 }
 
 func (np *NodeProperties) valueType() string {
@@ -152,9 +163,21 @@ type PropertyConstraint struct {
 // types in VyOS's XML config spec.  There are three types of nodes,
 // each contained in their own list.
 type NodeChildren struct {
-	LeafNodes []*LeafNode `xml:"leafNode"`
-	Nodes     []*Node     `xml:"node"`
-	TagNodes  []*TagNode  `xml:"tagNode"`
+	LeafNodes []*LeafNode `xml:"leafNode" json:"LeafNodes,omitempty"`
+	Nodes     []*Node     `xml:"node" json:"Nodes,omitempty"`
+	TagNodes  []*TagNode  `xml:"tagNode" json:"TagNodes,omitempty"`
+}
+
+func (nc *NodeChildren) Fixup() {
+	for _, ln := range nc.LeafNodes {
+		ln.Fixup()
+	}
+	for _, n := range nc.Nodes {
+		n.Fixup()
+	}
+	for _, tn := range nc.TagNodes {
+		tn.Fixup()
+	}
 }
 
 // Print prints the children of a node.
@@ -181,9 +204,22 @@ func (nc *NodeChildren) Merge(nc2 *NodeChildren) {
 // leafNode is a terminal node with no children and optionally a
 // single parameter or list of parameters.
 type LeafNode struct {
-	Name       string          `xml:"name,attr"`
-	Owner      string          `xml:"owner,attr"`
-	Properties *NodeProperties `xml:"properties"`
+	Name       string          `xml:"name,attr" json:"name"`
+	Owner      string          `xml:"owner,attr" json:"-"`
+	Properties *NodeProperties `xml:"properties" json:"-"`
+	ValueType string `json:"valuetype"`
+}
+
+func (ln *LeafNode) Fixup() {
+	if ln.Properties == nil {
+		ln.ValueType="SINGLE"
+	} else 	if ln.Properties.Valueless != nil {
+		ln.ValueType="NONE"
+	} else if ln.Properties.Multi != nil {
+		ln.ValueType="MULTI"
+	} else {
+		ln.ValueType="SINGLE"
+	}
 }
 
 func (ln *LeafNode) GetName() string { return ln.Name }
@@ -201,10 +237,16 @@ func (ln *LeafNode) Merge(n2 *LeafNode) {
 // value; in `interface ethernet eth0 address dhcp`, the `ethernet
 // eth0` is a tagNode, with a value of `eth0`.
 type TagNode struct {
-	Name       string          `xml:"name,attr"`
-	Owner      string          `xml:"owner,attr"`
-	Properties *NodeProperties `xml:"properties"`
-	Children   *NodeChildren   `xml:"children"`
+	Name       string          `xml:"name,attr" json:"name"`
+	Owner      string          `xml:"owner,attr" json:"-"`
+	Properties *NodeProperties `xml:"properties" json:"-"`
+	Children   *NodeChildren   `xml:"children" json:"children"`
+}
+
+func (tn *TagNode) Fixup() {
+	if tn.Children != nil {
+		tn.Children.Fixup()
+	}
 }
 
 func (tn *TagNode) GetName() string { return tn.Name }
