@@ -1,4 +1,4 @@
-package xmlreader
+package configmodel
 
 import (
 	"fmt"

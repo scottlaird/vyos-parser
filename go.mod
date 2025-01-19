@@ -2,6 +2,6 @@ module github.com/scottlaird/vyos-parser
 
 go 1.22.2
 
-replace github.com/scottlaird/vyos-parser/xmlreader => ./xmlreader
+replace github.com/scottlaird/vyos-parser/configmodel => ./configmodel
 
-require github.com/scottlaird/vyos-parser/xmlreader v0.0.0-20250119183125-82a1aa2032f5
+require github.com/scottlaird/vyos-parser/configmodel v0.0.0-20250119183125-82a1aa2032f5
