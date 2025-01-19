@@ -1,0 +1,199 @@
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="nhrp" owner="${vyos_conf_scripts_dir}/protocols_nhrp.py">
+        <properties>
+          <help>Next Hop Resolution Protocol (NHRP) parameters</help>
+          <priority>680</priority>
+        </properties>
+        <children>
+          <tagNode name="tunnel">
+            <properties>
+              <help>Tunnel for NHRP</help>
+              <constraint>
+                <regex>tun[0-9]+</regex>
+              </constraint>
+              <valueHelp>
+                <format>tunN</format>
+                <description>NHRP tunnel name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <node name="map">
+                <properties>
+                  <help>Map tunnel IP to NBMA </help>
+                </properties>
+                <children>
+                  <tagNode name="tunnel-ip">
+                    <properties>
+                      <help>Set a NHRP tunnel address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Set the IP address to map</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="nbma">
+                        <properties>
+                          <help>Set NHRP NBMA address to map</help>
+                          <completionHelp>
+                            <list>local</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Set the IP address to map</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>local</format>
+                            <description>Set the local address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                            <regex>(local)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="nhs">
+                <properties>
+                  <help>Map tunnel IP to NBMA of Next Hop Server</help>
+                </properties>
+                <children>
+                  <tagNode name="tunnel-ip">
+                    <properties>
+                      <help>Set a NHRP NHS tunnel address</help>
+                      <completionHelp>
+                        <list>dynamic</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Set the IP address to map</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dynamic</format>
+                        <description> Set Next Hop Server to have a dynamic address </description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                        <regex>(dynamic)</regex>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="nbma">
+                        <properties>
+                          <help>Set NHRP NBMA address of NHS</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Set the IP address to map</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <leafNode name="multicast">
+                <properties>
+                  <help>Map multicast to NBMA</help>
+                  <completionHelp>
+                    <list>dynamic</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Set the IP address to map(IP|FQDN)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dynamic</format>
+                    <description>NBMA address is learnt dynamically</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                    <regex>(dynamic)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="registration-no-unique">
+                <properties>
+                  <help>Don't set unique flag</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="authentication">
+                <properties>
+                  <help>NHRP authentication</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Pass phrase for NHRP authentication</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[^[:space:]]{1,8}</regex>
+                </constraint>
+                <constraintErrorMessage>Password should contain up to eight non-whitespace characters</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="holdtime">
+                <properties>
+                  <help>Holding time in seconds</help>
+                  <valueHelp>
+                    <format>u32:1-65000</format>
+                    <description>ring buffer size</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="redirect">
+                <properties>
+                  <help>Enable sending of Cisco style NHRP Traffic Indication packets</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Enable creation of shortcut routes. A received NHRP Traffic Indication will trigger the resolution and establishment of a shortcut route</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+<!-- include start from interface/mtu-68-16000.xml.i -->
+<leafNode name="mtu">
+  <properties>
+    <help>Maximum Transmission Unit (MTU)</help>
+    <valueHelp>
+      <format>u32:68-16000</format>
+      <description>Maximum Transmission Unit in byte</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 68-16000"/>
+    </constraint>
+    <constraintErrorMessage>MTU must be between 68 and 16000</constraintErrorMessage>
+  </properties>
+</leafNode>
+<!-- include end -->
+              <leafNode name="network-id">
+                <properties>
+                  <help>NHRP network id</help>
+                  <valueHelp>
+                    <format>&lt;1-4294967295&gt;</format>
+                    <description>NHRP network id</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
