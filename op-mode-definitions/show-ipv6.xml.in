@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 networking information</help>
+        </properties>
+        <children>
+          <node name="access-list">
+            <properties>
+              <help>Show all IPv6 access-lists</help>
+            </properties>
+            <command>vtysh -c "show ipv6 access-list"</command>
+          </node>
+          <tagNode name="access-list">
+            <properties>
+              <help>Show specified IPv6 access-list</help>
+              <completionHelp>
+                <list>WORD</list>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "show ipv6 access-list $4"</command>
+          </tagNode>
+          <node name="forwarding">
+            <properties>
+              <help>Show IPv6 forwarding status</help>
+            </properties>
+            <command>vtysh -c "show ipv6 forwarding"</command>
+          </node>
+          #include <include/show-nht.xml.i>
+          <node name="ripng">
+            <properties>
+              <help>Show RIPNG protocol information</help>
+            </properties>
+            <command>vtysh -c "show ipv6 ripng"</command>
+            <children>
+              <node name="status">
+                <properties>
+                  <help>Show RIPNG protocol status</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ripng status"</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

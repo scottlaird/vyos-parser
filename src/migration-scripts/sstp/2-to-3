@@ -1,0 +1,59 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - Rename SSTP ppp-settings node to ppp-options to make use of a common
+#   Jinja Template to render Accel-PPP services
+
+from vyos.configtree import ConfigTree
+
+base_path = ['vpn', 'sstp']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base_path):
+        # Nothing to do
+        return
+
+    if config.exists(base_path + ['ppp-settings']):
+        config.rename(base_path + ['ppp-settings'], 'ppp-options')
+
+    config_ns = base_path + ['network-settings', 'name-server']
+    if config.exists(config_ns):
+        config.copy(config_ns, base_path + ['name-server'])
+        config.delete(config_ns)
+
+    config_mtu = base_path + ['network-settings', 'mtu']
+    if config.exists(config_mtu):
+        config.copy(config_mtu, base_path + ['mtu'])
+        config.delete(config_mtu)
+
+    config_gw = base_path + ['network-settings', 'client-ip-settings', 'gateway-address']
+    if config.exists(config_gw):
+        config.copy(config_gw, base_path + ['gateway-address'])
+        config.delete(config_gw)
+
+    config_client_ip = base_path + ['network-settings', 'client-ip-settings']
+    if config.exists(config_client_ip):
+        config.copy(config_client_ip, base_path + ['client-ip-pool'])
+        config.delete(config_client_ip)
+
+    config_client_ipv6 = base_path + ['network-settings', 'client-ipv6-pool']
+    if config.exists(config_client_ipv6):
+        config.copy(config_client_ipv6, base_path + ['client-ipv6-pool'])
+        config.delete(config_client_ipv6)
+
+    # all nodes now have been migrated out of network-settings - delete node
+    config_nw_settings = base_path + ['network-settings']
+    if config.exists(config_nw_settings):
+        config.delete(config_nw_settings)

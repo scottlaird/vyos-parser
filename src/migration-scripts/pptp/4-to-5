@@ -1,0 +1,43 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - Move 'require' from 'protocols' in  'authentication' node
+# - Migrate to new default values in radius timeout and acct-timeout
+
+from vyos.configtree import ConfigTree
+
+base = ['vpn', 'pptp', 'remote-access']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    #migrate require to protocols
+    require_path = base + ['authentication', 'require']
+    if config.exists(require_path):
+        protocols = list(config.return_values(require_path))
+        for protocol in protocols:
+            config.set(base + ['authentication', 'protocols'], value=protocol,
+                       replace=False)
+        config.delete(require_path)
+    else:
+        config.set(base + ['authentication', 'protocols'], value='mschap-v2')
+
+    radius_path = base + ['authentication', 'radius']
+    if config.exists(radius_path):
+        if not config.exists(radius_path + ['timeout']):
+            config.set(radius_path + ['timeout'], value=3)
+        if not config.exists(radius_path + ['acct-timeout']):
+            config.set(radius_path + ['acct-timeout'], value=3)

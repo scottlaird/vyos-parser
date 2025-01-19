@@ -1,0 +1,73 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5993: Check if subnet is locally accessible and assign interface to subnet
+
+from ipaddress import ip_network
+from vyos.configtree import ConfigTree
+
+base = ['service', 'dhcpv6-server', 'shared-network-name']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    def find_subnet_interface(subnet):
+        subnet_net = ip_network(subnet)
+
+        def check_addr(if_path):
+            if config.exists(if_path + ['address']):
+                for addr in config.return_values(if_path + ['address']):
+                    try:
+                        if ip_network(addr, strict=False) == subnet_net:
+                            return True
+                    except:
+                        pass # interface address was probably "dhcp" or other magic string
+            return None
+
+        for iftype in config.list_nodes(['interfaces']):
+            for ifname in config.list_nodes(['interfaces', iftype]):
+                if_base = ['interfaces', iftype, ifname]
+
+                if check_addr(if_base):
+                    return ifname
+
+                if config.exists(if_base + ['vif']):
+                    for vif in config.list_nodes(if_base + ['vif']):
+                        if check_addr(if_base + ['vif', vif]):
+                            return f'{ifname}.{vif}'
+
+                if config.exists(if_base + ['vif-s']):
+                    for vifs in config.list_nodes(if_base + ['vif-s']):
+                        if check_addr(if_base + ['vif-s', vifs]):
+                            return f'{ifname}.{vifs}'
+
+                        if config.exists(if_base + ['vif-s', vifs, 'vif-c']):
+                            for vifc in config.list_nodes(if_base + ['vif-s', vifs, 'vif-c']):
+                                if check_addr(if_base + ['vif-s', vifs, 'vif-c', vifc]):
+                                    return f'{ifname}.{vifs}.{vifc}'
+
+        return False
+
+    for network in config.list_nodes(base):
+        if not config.exists(base + [network, 'subnet']):
+            continue
+
+        for subnet in config.list_nodes(base + [network, 'subnet']):
+            subnet_interface = find_subnet_interface(subnet)
+
+            if subnet_interface:
+                config.set(base + [network, 'subnet', subnet, 'interface'], value=subnet_interface)

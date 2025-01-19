@@ -1,0 +1,186 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/service_pppoe-server.py">
+        <properties>
+          <help>Point to Point over Ethernet (PPPoE) Server</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          #include <include/pppoe-access-concentrator.xml.i>
+          <leafNode name="access-concentrator">
+            <defaultValue>vyos-ac</defaultValue>
+          </leafNode>
+          <node name="authentication">
+            <properties>
+              <help>Authentication for remote access PPPoE Server</help>
+            </properties>
+            <children>
+              #include <include/accel-ppp/auth-local-users.xml.i>
+              #include <include/accel-ppp/auth-mode.xml.i>
+              #include <include/accel-ppp/auth-protocols.xml.i>
+              #include <include/radius-auth-server-ipv4.xml.i>
+              #include <include/accel-ppp/radius-additions.xml.i>
+              <node name="radius">
+                <children>
+                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
+                  <leafNode name="called-sid-format">
+                    <properties>
+                      <help>Format of Called-Station-Id attribute</help>
+                      <completionHelp>
+                        <list>ifname ifname:mac</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(ifname|ifname:mac)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid Called-Station-Id format</constraintErrorMessage>
+                      <valueHelp>
+                        <format>ifname</format>
+                        <description>NAS-Port-Id - should contain root interface name (NAS-Port-Id=eth1)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ifname:mac</format>
+                        <description>NAS-Port-Id - should contain root interface name and mac address (NAS-Port-Id=eth1:00:00:00:00:00:00)</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="any-login">
+                <properties>
+                  <help>Authentication with any login</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="interface">
+            <properties>
+              <help>interface(s) to listen on</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="combined">
+                <properties>
+                  <help>Listen on both VLANs and the base interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/accel-ppp/vlan.xml.i>
+              #include <include/accel-ppp/vlan-mon.xml.i>
+            </children>
+          </tagNode>
+          <leafNode name="service-name">
+            <properties>
+              <help>Service name</help>
+              <constraint>
+                <regex>[a-zA-Z0-9\-]{1,100}</regex>
+              </constraint>
+              <constraintErrorMessage>Service-name can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="accept-any-service">
+            <properties>
+              <help>Accept any service name in PPPoE Active Discovery Request (PADR)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="accept-blank-service">
+            <properties>
+              <help>Accept blank service name in PADR</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="pado-delay">
+            <properties>
+              <help>PADO delays</help>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disable new connections</description>
+              </valueHelp>
+              <completionHelp>
+                <list>disable</list>
+              </completionHelp>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number in ms</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+                <regex>disable</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid PADO delay</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="sessions">
+                <properties>
+                  <help>Number of sessions</help>
+                  <valueHelp>
+                    <format>u32:1-999999</format>
+                    <description>Number of sessions</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-999999"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid number of delayed sessions</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="session-control">
+            <properties>
+              <help>control sessions count</help>
+              <constraint>
+                <regex>(deny|disable|replace)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid value</constraintErrorMessage>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disables session control</description>
+              </valueHelp>
+              <valueHelp>
+                <format>deny</format>
+                <description>Deny second session authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>replace</format>
+                <description>Terminate first session when second is authorized</description>
+              </valueHelp>
+              <completionHelp>
+                <list>deny disable replace</list>
+              </completionHelp>
+            </properties>
+            <defaultValue>replace</defaultValue>
+          </leafNode>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/default-pool.xml.i>
+          #include <include/accel-ppp/default-ipv6-pool.xml.i>
+          #include <include/accel-ppp/extended-scripts.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/limits.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+          #include <include/accel-ppp/mtu-128-16384.xml.i>
+          #include <include/accel-ppp/ppp-options.xml.i>
+          <node name="ppp-options">
+            <children>
+              <leafNode name="min-mtu">
+                <defaultValue>1280</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/accel-ppp/shaper.xml.i>
+          #include <include/accel-ppp/snmp.xml.i>
+          #include <include/accel-ppp/wins-server.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
+          #include <include/accel-ppp/log.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

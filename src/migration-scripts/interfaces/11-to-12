@@ -1,0 +1,39 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - rename 'dhcpv6-options prefix-delegation' from single node to a new tag node
+#   'dhcpv6-options pd 0'
+# - delete 'sla-len' from CLI - value is calculated on demand
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    for type in config.list_nodes(['interfaces']):
+        for interface in config.list_nodes(['interfaces', type]):
+            # cache current config tree
+            base_path = ['interfaces', type, interface, 'dhcpv6-options']
+            old_base = base_path + ['prefix-delegation']
+            new_base = base_path + ['pd']
+            if config.exists(old_base):
+                config.set(new_base)
+                config.set_tag(new_base)
+                config.copy(old_base, new_base + ['0'])
+                config.delete(old_base)
+
+                for pd in config.list_nodes(new_base):
+                    for tmp in config.list_nodes(new_base + [pd, 'interface']):
+                        sla_config = new_base + [pd, 'interface', tmp, 'sla-len']
+                        if config.exists(sla_config):
+                            config.delete(sla_config)

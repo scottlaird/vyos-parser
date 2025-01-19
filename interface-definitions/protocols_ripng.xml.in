@@ -1,0 +1,155 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="ripng" owner="${vyos_conf_scripts_dir}/protocols_ripng.py">
+        <properties>
+          <help>Routing Information Protocol (RIPng) parameters</help>
+          <priority>660</priority>
+        </properties>
+        <children>
+          <leafNode name="aggregate-address">
+            <properties>
+              <help>Aggregate RIPng route announcement</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>Aggregate RIPng route announcement</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          #include <include/rip/default-information.xml.i>
+          #include <include/rip/default-metric.xml.i>
+          <node name="distribute-list">
+            <properties>
+              <help>Filter networks in routing updates</help>
+            </properties>
+            <children>
+              #include <include/rip/access-list6.xml.i>
+              <tagNode name="interface">
+                <properties>
+                  <help>Apply filtering to an interface</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Apply filtering to an interface</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/rip/access-list6.xml.i>
+                  #include <include/rip/prefix-list6.xml.i>
+                </children>
+              </tagNode>
+              #include <include/rip/prefix-list6.xml.i>
+            </children>
+          </node>
+          #include <include/rip/interface.xml.i>
+          <leafNode name="network">
+            <properties>
+              <help>RIPng network</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>RIPng network</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="passive-interface">
+            <properties>
+              <help>Passive interface</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Suppress routing updates on interface</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="redistribute">
+            <properties>
+              <help>Redistribute information from another routing protocol</help>
+            </properties>
+            <children>
+              <node name="bgp">
+                <properties>
+                  <help>Redistribute BGP routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+              <node name="connected">
+                <properties>
+                  <help>Redistribute connected routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+              <node name="kernel">
+                <properties>
+                  <help>Redistribute kernel routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+              <node name="ospfv3">
+                <properties>
+                  <help>Redistribute OSPFv3 routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+              <node name="static">
+                <properties>
+                  <help>Redistribute static routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+              <node name="babel">
+                <properties>
+                  <help>Redistribute Babel routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="route">
+            <properties>
+              <help>RIPng static route</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>RIPng static route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          #include <include/route-map.xml.i>
+          #include <include/rip/timers.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

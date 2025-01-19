@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="ospfv3" owner="${vyos_conf_scripts_dir}/protocols_ospfv3.py">
+        <properties>
+          <help>Open Shortest Path First (OSPF) for IPv6</help>
+          <priority>620</priority>
+        </properties>
+        <children>
+          #include <include/ospfv3/protocol-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

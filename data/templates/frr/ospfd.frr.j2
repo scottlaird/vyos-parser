@@ -1,0 +1,265 @@
+!
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.authentication.plaintext_password is vyos_defined %}
+ ip ospf authentication-key {{ iface_config.authentication.plaintext_password }}
+{%         elif iface_config.authentication.md5 is vyos_defined %}
+ ip ospf authentication message-digest
+{%             if iface_config.authentication.md5.key_id is vyos_defined %}
+{%                 for key, key_config in iface_config.authentication.md5.key_id.items() %}
+ ip ospf message-digest-key {{ key }} md5 {{ key_config.md5_key }}
+{%                 endfor %}
+{%             endif %}
+{%         endif %}
+{%         if iface_config.area is vyos_defined %}
+ ip ospf area {{ iface_config.area }}
+{%         endif %}
+{%         if iface_config.bandwidth is vyos_defined %}
+ bandwidth {{ iface_config.bandwidth }}
+{%         endif %}
+{%         if iface_config.cost is vyos_defined %}
+ ip ospf cost {{ iface_config.cost }}
+{%         endif %}
+{%         if iface_config.priority is vyos_defined %}
+ ip ospf priority {{ iface_config.priority }}
+{%         endif %}
+{%         if iface_config.hello_interval is vyos_defined %}
+ ip ospf hello-interval {{ iface_config.hello_interval }}
+{%         endif %}
+{%         if iface_config.retransmit_interval is vyos_defined %}
+ ip ospf retransmit-interval {{ iface_config.retransmit_interval }}
+{%         endif %}
+{%         if iface_config.retransmit_window is vyos_defined %}
+ ip ospf retransmit-window {{ iface_config.retransmit_window }}
+{%         endif %}
+{%         if iface_config.transmit_delay is vyos_defined %}
+ ip ospf transmit-delay {{ iface_config.transmit_delay }}
+{%         endif %}
+{%         if iface_config.dead_interval is vyos_defined %}
+ ip ospf dead-interval {{ iface_config.dead_interval }}
+{%         elif iface_config.hello_multiplier is vyos_defined %}
+ ip ospf dead-interval minimal hello-multiplier {{ iface_config.hello_multiplier }}
+{%         endif %}
+{%         if iface_config.bfd is vyos_defined %}
+ ip ospf bfd
+{%         endif %}
+{%         if iface_config.bfd.profile is vyos_defined %}
+ ip ospf bfd profile {{ iface_config.bfd.profile }}
+{%         endif %}
+{%         if iface_config.ldp_sync.disable is vyos_defined %}
+ no ip ospf mpls ldp-sync
+{%         elif iface_config.ldp_sync.holddown is vyos_defined %}
+ ip ospf mpls ldp-sync
+ ip ospf mpls ldp-sync holddown {{ iface_config.ldp_sync.holddown }}
+{%         endif %}
+{%         if iface_config.mtu_ignore is vyos_defined %}
+ ip ospf mtu-ignore
+{%         endif %}
+{%         if iface_config.network is vyos_defined %}
+ ip ospf network {{ iface_config.network }}
+{%         endif %}
+{%         if iface_config.passive is vyos_defined %}
+ {{ 'no ' if iface_config.passive.disable is vyos_defined }}ip ospf passive
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}
+!
+router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
+{% if access_list is vyos_defined %}
+{%     for acl, acl_config in access_list.items() %}
+{%         for protocol in acl_config.export if acl_config.export is vyos_defined %}
+ distribute-list {{ acl }} out {{ protocol }}
+{%         endfor %}
+{%     endfor %}
+{% endif %}
+{% if aggregation.timer is vyos_defined %}
+ aggregation timer {{ aggregation.timer }}
+{% endif %}
+{% if area is vyos_defined %}
+{%     for area_id, area_config in area.items() %}
+{%         if area_config.area_type is vyos_defined %}
+{%             for type, type_config in area_config.area_type.items() if type != 'normal' %}
+ area {{ area_id }} {{ type }} {{ 'no-summary' if type_config.no_summary is vyos_defined }}
+{%                 if type_config.default_cost is vyos_defined %}
+ area {{ area_id }} default-cost {{ type_config.default_cost }}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if area_config.authentication is vyos_defined %}
+ area {{ area_id }} authentication {{ 'message-digest' if area_config.authentication is vyos_defined('md5') }}
+{%         endif %}
+{%         for network in area_config.network if area_config.network is vyos_defined %}
+ network {{ network }} area {{ area_id }}
+{%         endfor %}
+{%         if area_config.range is vyos_defined %}
+{%             for range, range_config in area_config.range.items() %}
+{%                 if range_config.not_advertise is vyos_defined %}
+ area {{ area_id }} range {{ range }} not-advertise
+{%                 else %}
+ area {{ area_id }} range {{ range }}
+{%                 endif %}
+{%                 if range_config.cost is vyos_defined %}
+ area {{ area_id }} range {{ range }} cost {{ range_config.cost }}
+{%                 endif %}
+{%                 if range_config.substitute is vyos_defined %}
+ area {{ area_id }} range {{ range }} substitute {{ range_config.substitute }}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if area_config.export_list is vyos_defined %}
+ area {{ area_id }} export-list {{ area_config.export_list }}
+{%         endif %}
+{%         if area_config.import_list is vyos_defined %}
+ area {{ area_id }} import-list {{ area_config.import_list }}
+{%         endif %}
+{%         if area_config.shortcut is vyos_defined %}
+ area {{ area_id }} shortcut {{ area_config.shortcut }}
+{%         endif %}
+{%         if area_config.virtual_link is vyos_defined %}
+{%             for link, link_config in area_config.virtual_link.items() %}
+{%                 if link_config.authentication.plaintext_password is vyos_defined %}
+ area {{ area_id }} virtual-link {{ link }} authentication-key {{ link_config.authentication.plaintext_password }}
+{%                 elif link_config.authentication.md5.key_id is vyos_defined %}
+{%                     for key, key_config in link_config.authentication.md5.key_id.items() %}
+ area {{ area_id }} virtual-link {{ link }} message-digest-key {{ key }} md5 {{ key_config.md5_key }}
+{%                     endfor %}
+{%                 endif %}
+{#         The following values are default values #}
+ area {{ area_id }} virtual-link {{ link }} hello-interval {{ link_config.hello_interval }} retransmit-interval {{ link_config.retransmit_interval }} retransmit-window {{ link_config.retransmit_window }} transmit-delay {{ link_config.transmit_delay }} dead-interval {{ link_config.dead_interval }}
+{%             endfor %}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if auto_cost.reference_bandwidth is vyos_defined %}
+ auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
+{% endif %}
+{% if capability.opaque is vyos_defined %}
+ capability opaque
+{% endif %}
+{% if default_information.originate is vyos_defined %}
+ default-information originate {{ 'always' if default_information.originate.always is vyos_defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is vyos_defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is vyos_defined }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is vyos_defined }}
+{% endif %}
+{% if default_metric is vyos_defined %}
+ default-metric {{ default_metric }}
+{% endif %}
+{% if maximum_paths is vyos_defined %}
+ maximum-paths {{ maximum_paths }}
+{% endif %}
+{% if ldp_sync.holddown is vyos_defined %}
+ mpls ldp-sync holddown {{ ldp_sync.holddown }}
+{% elif ldp_sync is vyos_defined %}
+ mpls ldp-sync
+{% endif %}
+{% if distance.global is vyos_defined %}
+ distance {{ distance.global }}
+{% endif %}
+{% if distance.ospf is vyos_defined %}
+ distance ospf {{ 'intra-area ' + distance.ospf.intra_area if distance.ospf.intra_area is vyos_defined }} {{ 'inter-area ' + distance.ospf.inter_area if distance.ospf.inter_area is vyos_defined }} {{ 'external ' + distance.ospf.external if distance.ospf.external is vyos_defined }}
+{% endif %}
+{% if graceful_restart is vyos_defined %}
+{%     if graceful_restart.grace_period is vyos_defined %}
+ graceful-restart grace-period {{ graceful_restart.grace_period }}
+{%     endif %}
+{%     if graceful_restart.helper.enable.router_id is vyos_defined %}
+{%         for router_id in graceful_restart.helper.enable.router_id %}
+ graceful-restart helper enable {{ router_id }}
+{%         endfor %}
+{%     elif graceful_restart.helper.enable is vyos_defined %}
+ graceful-restart helper enable
+{%     endif %}
+{%     if graceful_restart.helper.planned_only is vyos_defined %}
+ graceful-restart helper planned-only
+{%     endif %}
+{%     if graceful_restart.helper.no_strict_lsa_checking is vyos_defined %}
+ no graceful-restart helper strict-lsa-checking
+{%     endif %}
+{%     if graceful_restart.helper.supported_grace_time is vyos_defined %}
+ graceful-restart helper supported-grace-time {{ graceful_restart.helper.supported_grace_time }}
+{%     endif %}
+{% endif %}
+{% if log_adjacency_changes is vyos_defined %}
+ log-adjacency-changes {{ "detail" if log_adjacency_changes.detail is vyos_defined }}
+{% endif %}
+{% if max_metric.router_lsa.administrative is vyos_defined %}
+ max-metric router-lsa administrative
+{% endif %}
+{% if max_metric.router_lsa.on_shutdown is vyos_defined %}
+ max-metric router-lsa on-shutdown {{ max_metric.router_lsa.on_shutdown }}
+{% endif %}
+{% if max_metric.router_lsa.on_startup is vyos_defined %}
+ max-metric router-lsa on-startup {{ max_metric.router_lsa.on_startup }}
+{% endif %}
+{% if mpls_te.enable is vyos_defined %}
+ mpls-te on
+ mpls-te router-address {{ mpls_te.router_address }}
+{% endif %}
+{% if neighbor is vyos_defined %}
+{%     for address, address_config in neighbor.items() %}
+ neighbor {{ address }} {{ 'priority ' + address_config.priority if address_config.priority is vyos_defined }} {{ 'poll-interval ' + address_config.poll_interval if address_config.poll_interval is vyos_defined }}
+{%     endfor %}
+{% endif %}
+{% if parameters.abr_type is vyos_defined %}
+ ospf abr-type {{ parameters.abr_type }}
+{% endif %}
+{% if parameters.opaque_lsa is vyos_defined %}
+ ospf opaque-lsa
+{% endif %}
+{% if parameters.rfc1583_compatibility is vyos_defined %}
+ ospf rfc1583compatibility
+{% endif %}
+{% if parameters.router_id is vyos_defined %}
+ ospf router-id {{ parameters.router_id }}
+{% endif %}
+{% if passive_interface is vyos_defined('default') %}
+ passive-interface default
+{% endif %}
+{% if redistribute is vyos_defined %}
+{%     for protocol, options in redistribute.items() %}
+{%         if protocol == 'table' %}
+{%             for table, table_options in options.items() %}
+ redistribute {{ protocol }} {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
+{%             endfor %}
+{%         else %}
+ redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if refresh.timers is vyos_defined %}
+ refresh timer {{ refresh.timers }}
+{% endif %}
+{% if summary_address is vyos_defined %}
+{%     for prefix, prefix_options in summary_address.items() %}
+ summary-address {{ prefix }} {{ 'tag ' + prefix_options.tag if prefix_options.tag is vyos_defined }}{{ 'no-advertise' if prefix_options.no_advertise is vyos_defined }}
+{%     endfor %}
+{% endif %}
+{% if segment_routing is vyos_defined %}
+ segment-routing on
+{%     if segment_routing.maximum_label_depth is vyos_defined %}
+ segment-routing node-msd {{ segment_routing.maximum_label_depth }}
+{%     endif %}
+{%     if segment_routing.global_block is vyos_defined %}
+{%         if segment_routing.local_block is vyos_defined %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }} local-block {{ segment_routing.local_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
+{%         else %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }}
+{%         endif %}
+{%     endif %}
+{%     if segment_routing.prefix is vyos_defined %}
+{%         for prefix, prefix_config in segment_routing.prefix.items() %}
+{%             if prefix_config.index is vyos_defined %}
+{%                 if prefix_config.index.value is vyos_defined %}
+ segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }} {{ 'explicit-null' if prefix_config.index.explicit_null is vyos_defined }} {{ 'no-php-flag' if prefix_config.index.no_php_flag is vyos_defined }}
+{%                 endif %}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+{% endif %}
+{% if timers.throttle.spf.delay is vyos_defined and timers.throttle.spf.initial_holdtime is vyos_defined and timers.throttle.spf.max_holdtime is vyos_defined %}
+{#   Timer values have default values #}
+ timers throttle spf {{ timers.throttle.spf.delay }} {{ timers.throttle.spf.initial_holdtime }} {{ timers.throttle.spf.max_holdtime }}
+{% endif %}
+exit
+!

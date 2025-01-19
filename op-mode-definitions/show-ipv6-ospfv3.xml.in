@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <node name="ospfv3">
+            <properties>
+              <help>Show IPv6 Open Shortest Path First (OSPF)</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              <node name="area">
+                <properties>
+                  <help>Show Shortest Path First tree information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
+              </node>
+              <tagNode name="area">
+                <properties>
+                  <help>Area ID (as an IPv4 notation)</help>
+                  <completionHelp>
+                    <path>protocols ospfv3 area</path>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 area $5 spf tree"</command>
+                <children>
+                  <tagNode name="router">
+                    <properties>
+                      <help> Simulate view point (Router ID)</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 simulate spf-tree $7 $4 $5"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+              #include <include/ospfv3/border-routers.xml.i>
+              #include <include/ospfv3/database.xml.i>
+              #include <include/ospf/graceful-restart.xml.i>
+              #include <include/ospfv3/interface.xml.i>
+              #include <include/ospfv3/linkstate.xml.i>
+              #include <include/ospfv3/neighbor.xml.i>
+              #include <include/ospfv3/redistribute.xml.i>
+              #include <include/ospfv3/route.xml.i>
+              <node name="vrf">
+                <properties>
+                  <help>Specify the VRF</help>
+                  <completionHelp>
+                    <list>all</list>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+              <tagNode name="vrf">
+                <properties>
+                  <help>VRF name</help>
+                  <completionHelp>
+                    <list>all</list>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  <node name="area">
+                    <properties>
+                      <help>Show Shortest Path First tree information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 vrf $5 spf tree"</command>
+                  </node>
+                  <tagNode name="area">
+                    <properties>
+                      <help>Area ID (as an IPv4 notation)</help>
+                      <completionHelp>
+                        <path>protocols ospfv3 area</path>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 vrf $5 area $7 spf tree"</command>
+                    <children>
+                      <tagNode name="router">
+                        <properties>
+                          <help> Simulate view point (Router ID)</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 vrf $5 simulate spf-tree $9 $6 $7"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                  #include <include/ospfv3/border-routers.xml.i>
+                  #include <include/ospfv3/database.xml.i>
+                  #include <include/ospf/graceful-restart.xml.i>
+                  #include <include/ospfv3/interface.xml.i>
+                  #include <include/ospfv3/linkstate.xml.i>
+                  #include <include/ospfv3/neighbor.xml.i>
+                  #include <include/ospfv3/redistribute.xml.i>
+                  #include <include/ospfv3/route.xml.i>
+                </children>
+              </tagNode>
+              <leafNode name="vrfs">
+                <properties>
+                  <help>Show OSPFv3 VRFs</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

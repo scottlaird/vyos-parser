@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nat" owner="${vyos_conf_scripts_dir}/nat.py">
+    <properties>
+      <help>Network Address Translation (NAT) parameters</help>
+      <priority>220</priority>
+    </properties>
+    <children>
+      <node name="destination">
+        <properties>
+          <help>Destination NAT settings</help>
+        </properties>
+        <children>
+          #include <include/nat-rule.xml.i>
+          <tagNode name="rule">
+            <children>
+              #include <include/firewall/inbound-interface.xml.i>
+              <node name="translation">
+                <properties>
+                  <help>Inside NAT IP (destination NAT only)</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address, subnet, or range</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
+                  <node name="redirect">
+                    <properties>
+                      <help>Redirect to local host</help>
+                    </properties>
+                    <children>
+                      #include <include/nat-translation-port.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="source">
+        <properties>
+          <help>Source NAT settings</help>
+        </properties>
+        <children>
+          #include <include/nat-rule.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number for NAT</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number of NAT rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>NAT rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/firewall/outbound-interface.xml.i>
+              <node name="translation">
+                <properties>
+                  <help>Outside NAT IP (source NAT only)</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address, subnet, or range</help>
+                      <completionHelp>
+                        <list>masquerade</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>masquerade</format>
+                        <description>NAT to the primary address of outbound-interface</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                        <regex>(masquerade)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="static">
+        <properties>
+          <help>Static NAT (one-to-one)</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number for NAT</help>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <node name="destination">
+                <properties>
+                  <help>NAT destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/ipv4-address-prefix.xml.i>
+                </children>
+              </node>
+              #include <include/inbound-interface.xml.i>
+              #include <include/firewall/log.xml.i>
+              <node name="translation">
+                <properties>
+                  <help>Translation address or prefix</help>
+                </properties>
+                <children>
+                  #include <include/ipv4-address-prefix.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

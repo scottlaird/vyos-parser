@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="bgp">
+            <properties>
+              <help>Border Gateway Protocol (BGP) information</help>
+            </properties>
+            <children>
+              <leafNode name="all">
+                <properties>
+                  <help>Clear all BGP peering sessions</help>
+                </properties>
+                <command>vtysh -c "clear bgp ipv4 *"</command>
+              </leafNode>
+              <node name="dampening">
+                <properties>
+                  <help>Clear BGP route flap dampening information</help>
+                </properties>
+                <command>vtysh -c "clear ip bgp dampening"</command>
+              </node>
+              <tagNode name="dampening">
+                <properties>
+                  <help>Clear BGP route flap dampening information for given host|network address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "clear ip bgp dampening $5"</command>
+                <children>
+                  <leafNode name="node.tag">
+                    <properties>
+                      <help>Clear BGP route flap dampening information for given network address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "clear ip bgp dampening $5 $6"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+              #include <include/bgp/reset-bgp-afi-common.xml.i>
+              #include <include/bgp/reset-bgp-peer-group.xml.i>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Clear BGP statistics or status for vrf</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="all">
+                    <properties>
+                      <help>Clear all BGP peering sessions for vrf</help>
+                    </properties>
+                    <command>vtysh -c "clear bgp vrf $5 *"</command>
+                  </leafNode>
+                  <leafNode name="node.tag">
+                    <properties>
+                      <help>Clear BGP neighbor IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "clear bgp vrf $5 $6"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="bgp">
+            <properties>
+              <help>BGP IPv4/IPv6 neighbor to clear</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

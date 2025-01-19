@@ -1,0 +1,33 @@
+#!/usr/sbin/nft -f
+
+{% if first_install is not vyos_defined %}
+delete table ip vyos_static_nat
+{% endif %}
+{% if deleted is not vyos_defined %}
+table ip vyos_static_nat {
+    #
+    # Destination NAT rules build up here
+    #
+
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+{%     if static.rule is vyos_defined %}
+{%         for rule, config in static.rule.items() if config.disable is not vyos_defined %}
+    {{ config | nat_static_rule(rule, 'destination') }}
+{%         endfor %}
+{%     endif %}
+    }
+
+    #
+    # Source NAT rules build up here
+    #
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+{%     if static.rule is vyos_defined %}
+{%         for rule, config in static.rule.items() if config.disable is not vyos_defined %}
+    {{ config | nat_static_rule(rule, 'source') }}
+{%         endfor %}
+{%     endif %}
+    }
+}
+{% endif %}

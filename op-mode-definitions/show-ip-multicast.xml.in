@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="multicast">
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Show multicast interfaces</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/igmp-proxy.py show_interface</command>
+              </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>IP multicast information</help>
+                </properties>
+                <command>vtysh -c "show ip multicast"</command>
+              </leafNode>
+              <leafNode name="route">
+                <properties>
+                  <help>IP multicast routing table</help>
+                </properties>
+                <command>vtysh -c "show ip mroute"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

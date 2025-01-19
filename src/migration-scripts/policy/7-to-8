@@ -1,0 +1,36 @@
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5834: Rename 'enable-default-log' to 'default-log'
+# From
+    # set policy [route | route 6] <route> enable-default-log
+# To
+    # set policy [route | route 6] <route> default-log
+
+from vyos.configtree import ConfigTree
+
+base = ['policy']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for family in ['route', 'route6']:
+        if config.exists(base + [family]):
+
+            for policy_name in config.list_nodes(base + [family]):
+                if config.exists(base + [family, policy_name, 'enable-default-log']):
+                    config.rename(base + [family, policy_name, 'enable-default-log'], 'default-log')

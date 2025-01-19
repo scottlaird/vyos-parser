@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import sys
+import shlex
+
+from vyos.utils.file import file_is_persistent
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        sys.exit('Please specify script file to check')
+
+    # if the "script" is a script+ stowaway arguments, this removes the aguements
+    script = shlex.split(sys.argv[1])[0]
+
+    if not os.path.exists(script):
+        sys.exit(f'File {script} does not exist')
+
+    if not (os.path.isfile(script) and os.access(script, os.X_OK)):
+        sys.exit(f'File {script} is not an executable file')
+
+    # File outside the config dir is just a warning
+    if not file_is_persistent(script):
+        sys.exit(0)(
+            f'Warning: file {script} is outside the "/config" directory\n'
+            'It will not be automatically migrated to a new image on system update'
+        )

@@ -1,0 +1,54 @@
+# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Unclutter PPTP VPN configuiration - move radius-server top level tag
+# nodes to a regular node which now also configures the radius source address
+# used when querying a radius server
+
+from vyos.configtree import ConfigTree
+
+cfg_base = ['vpn', 'pptp', 'remote-access', 'authentication']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(cfg_base):
+        # Nothing to do
+        return
+
+    # Migrate "vpn pptp authentication radius-source-address" to new
+    # "vpn pptp authentication radius source-address"
+    if config.exists(cfg_base + ['radius-source-address']):
+        address = config.return_value(cfg_base + ['radius-source-address'])
+        # delete old configuration node
+        config.delete(cfg_base + ['radius-source-address'])
+        # write new configuration node
+        config.set(cfg_base + ['radius', 'source-address'], value=address)
+
+    # Migrate "vpn pptp authentication radius-server" tag node to new
+    # "vpn pptp authentication radius server" tag node
+    for server in config.list_nodes(cfg_base + ['radius-server']):
+        base_server = cfg_base + ['radius-server', server]
+        key = config.return_value(base_server + ['key'])
+
+        # delete old configuration node
+        config.delete(base_server)
+        # write new configuration node
+        config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
+
+        # format as tag node
+        config.set_tag(cfg_base + ['radius', 'server'])
+
+    # delete top level tag node
+    if config.exists(cfg_base + ['radius-server']):
+        config.delete(cfg_base + ['radius-server'])

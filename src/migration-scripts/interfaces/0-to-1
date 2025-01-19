@@ -1,0 +1,113 @@
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Change syntax of bridge interface
+# - move interface based bridge-group to actual bridge (de-nest)
+# - make stp and igmp-snooping nodes valueless
+# https://vyos.dev/T1556
+
+from vyos.configtree import ConfigTree
+
+def migrate_bridge(config, tree, intf):
+    # check if bridge-group exists
+    tree_bridge = tree + ['bridge-group']
+    if config.exists(tree_bridge):
+        bridge = config.return_value(tree_bridge + ['bridge'])
+        # create new bridge member interface
+        config.set(base + [bridge, 'member', 'interface', intf])
+        # format as tag node to avoid loading problems
+        config.set_tag(base + [bridge, 'member', 'interface'])
+
+        # cost: migrate if configured
+        tree_cost = tree + ['bridge-group', 'cost']
+        if config.exists(tree_cost):
+            cost = config.return_value(tree_cost)
+            # set new node
+            config.set(base + [bridge, 'member', 'interface', intf, 'cost'], value=cost)
+
+        # priority: migrate if configured
+        tree_priority = tree + ['bridge-group', 'priority']
+        if config.exists(tree_priority):
+            priority = config.return_value(tree_priority)
+            # set new node
+            config.set(base + [bridge, 'member', 'interface', intf, 'priority'], value=priority)
+
+        # Delete the old bridge-group assigned to an interface
+        config.delete(tree_bridge)
+
+
+def migrate(config: ConfigTree) -> None:
+    base = ['interfaces', 'bridge']
+
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    #
+    # make stp and igmp-snooping nodes valueless
+    #
+    for br in config.list_nodes(base):
+        # STP: check if enabled
+        if config.exists(base + [br, 'stp']):
+            stp_val = config.return_value(base + [br, 'stp'])
+            # STP: delete node with old syntax
+            config.delete(base + [br, 'stp'])
+            # STP: set new node - if enabled
+            if stp_val == "true":
+                config.set(base + [br, 'stp'], value=None)
+
+        # igmp-snooping: check if enabled
+        if config.exists(base + [br, 'igmp-snooping', 'querier']):
+            igmp_val = config.return_value(base + [br, 'igmp-snooping', 'querier'])
+            # igmp-snooping: delete node with old syntax
+            config.delete(base + [br, 'igmp-snooping', 'querier'])
+            # igmp-snooping: set new node - if enabled
+            if igmp_val == "enable":
+                config.set(base + [br, 'igmp', 'querier'], value=None)
+
+    #
+    # move interface based bridge-group to actual bridge (de-nest)
+    #
+    bridge_types = ['bonding', 'ethernet', 'l2tpv3', 'openvpn', 'vxlan', 'wireless']
+    for type in bridge_types:
+        if not config.exists(['interfaces', type]):
+            continue
+
+        for interface in config.list_nodes(['interfaces', type]):
+            # check if bridge-group exists
+            bridge_group = ['interfaces', type, interface]
+            if config.exists(bridge_group + ['bridge-group']):
+                migrate_bridge(config, bridge_group, interface)
+
+            # We also need to migrate VLAN interfaces
+            vlan_base = ['interfaces', type, interface, 'vif']
+            if config.exists(vlan_base):
+                for vlan in config.list_nodes(vlan_base):
+                    intf = "{}.{}".format(interface, vlan)
+                    migrate_bridge(config, vlan_base + [vlan], intf)
+
+            # And then we have service VLANs (vif-s) interfaces
+            vlan_base = ['interfaces', type, interface, 'vif-s']
+            if config.exists(vlan_base):
+                for vif_s in config.list_nodes(vlan_base):
+                    intf = "{}.{}".format(interface, vif_s)
+                    migrate_bridge(config, vlan_base + [vif_s], intf)
+
+                    # Every service VLAN can have multiple customer VLANs (vif-c)
+                    vlan_c = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
+                    if config.exists(vlan_c):
+                        for vif_c in config.list_nodes(vlan_c):
+                            intf = "{}.{}.{}".format(interface, vif_s, vif_c)
+                            migrate_bridge(config, vlan_c + [vif_c], intf)

@@ -1,0 +1,59 @@
+#!/usr/sbin/nft -f
+
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
+{% if first_install is not vyos_defined %}
+delete table ip vyos_nat
+{% endif %}
+{% if deleted is not vyos_defined %}
+table ip vyos_nat {
+    #
+    # Destination NAT rules build up here
+    #
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+        counter jump VYOS_PRE_DNAT_HOOK
+{%     if destination.rule is vyos_defined %}
+{%         for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
+        {{ config | nat_rule(rule, 'destination') }}
+{%         endfor %}
+{%     endif %}
+    }
+{%     for set_name in ip_fqdn %}
+    set FQDN_nat_{{ set_name }} {
+        type ipv4_addr
+        flags interval
+    }
+{%     endfor %}
+
+    #
+    # Source NAT rules build up here
+    #
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+        counter jump VYOS_PRE_SNAT_HOOK
+{%     if source.rule is vyos_defined %}
+{%         for rule, config in source.rule.items() if config.disable is not vyos_defined %}
+        {{ config | nat_rule(rule, 'source') }}
+{%         endfor %}
+{%     endif %}
+
+    }
+{%     for set_name in ip_fqdn %}
+    set FQDN_nat_{{ set_name }} {
+        type ipv4_addr
+        flags interval
+    }
+{%     endfor %}
+
+    chain VYOS_PRE_DNAT_HOOK {
+        return
+    }
+
+    chain VYOS_PRE_SNAT_HOOK {
+        return
+    }
+
+{{ group_tmpl.groups(firewall_group, False, True) }}
+}
+{% endif %}

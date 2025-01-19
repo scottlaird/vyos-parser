@@ -1,0 +1,52 @@
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Between 1.2.3 and 1.2.4, FRR added per-neighbor enforce-first-as option.
+# Unfortunately they also removed the global enforce-first-as option,
+# which broke all old configs that used to have it.
+#
+# To emulate the effect of the original option, we insert it in every neighbor
+# if the config used to have the original global option
+
+from vyos.configtree import ConfigTree
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['protocols', 'bgp']):
+        # Nothing to do
+        return
+
+    # Check if BGP is actually configured and obtain the ASN
+    asn_list = config.list_nodes(['protocols', 'bgp'])
+    if asn_list:
+        # There's always just one BGP node, if any
+        asn = asn_list[0]
+    else:
+        # There's actually no BGP, just its empty shell
+        return
+
+    # Check if BGP enforce-first-as option is set
+    enforce_first_as_path = ['protocols', 'bgp', asn, 'parameters', 'enforce-first-as']
+    if config.exists(enforce_first_as_path):
+        # Delete the obsolete option
+        config.delete(enforce_first_as_path)
+
+        # Now insert it in every peer
+        peers = config.list_nodes(['protocols', 'bgp', asn, 'neighbor'])
+        for p in peers:
+            config.set(['protocols', 'bgp', asn, 'neighbor', p, 'enforce-first-as'])
+    else:
+        # Do nothing
+        return

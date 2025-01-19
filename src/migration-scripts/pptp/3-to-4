@@ -1,0 +1,29 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# - Move 'mppe' from 'authentication' node to 'ppp-options'
+
+from vyos.configtree import ConfigTree
+
+base = ['vpn', 'pptp', 'remote-access']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    if config.exists(base + ['authentication','mppe']):
+        mppe = config.return_value(base + ['authentication','mppe'])
+        config.set(base + ['ppp-options', 'mppe'], value=mppe, replace=True)
+        config.delete(base + ['authentication','mppe'])

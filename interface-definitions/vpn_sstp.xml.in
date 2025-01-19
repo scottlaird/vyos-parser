@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpn">
+    <children>
+      <node name="sstp" owner="${vyos_conf_scripts_dir}/vpn_sstp.py">
+        <properties>
+          <help>Secure Socket Tunneling Protocol (SSTP) server</help>
+          <priority>901</priority>
+        </properties>
+        <children>
+          <node name="authentication">
+            <properties>
+              <help>Authentication for remote access SSTP Server</help>
+            </properties>
+            <children>
+              #include <include/accel-ppp/auth-local-users.xml.i>
+              #include <include/accel-ppp/auth-mode.xml.i>
+              #include <include/accel-ppp/auth-protocols.xml.i>
+              #include <include/radius-auth-server-ipv4.xml.i>
+              #include <include/accel-ppp/radius-additions.xml.i>
+              <node name="radius">
+                <children>
+                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="ssl">
+            <properties>
+              <help>SSL Certificate, SSL Key and CA</help>
+            </properties>
+            <children>
+              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/certificate.xml.i>
+            </children>
+          </node>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/default-pool.xml.i>
+          #include <include/accel-ppp/default-ipv6-pool.xml.i>
+          #include <include/accel-ppp/extended-scripts.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/limits.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>443</defaultValue>
+          </leafNode>
+          #include <include/accel-ppp/ppp-options.xml.i>
+          #include <include/accel-ppp/shaper.xml.i>
+          #include <include/accel-ppp/snmp.xml.i>
+          #include <include/accel-ppp/wins-server.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
+          <leafNode name="host-name">
+            <properties>
+              <help>Only allow connection to specified host with the same TLS SNI</help>
+              <constraint>
+                #include <include/constraint/host-name.xml.i>
+              </constraint>
+              <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/accel-ppp/log.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

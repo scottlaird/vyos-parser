@@ -1,0 +1,431 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <properties>
+      <help>Monitor system information</help>
+    </properties>
+    <children>
+      <node name="log">
+        <properties>
+          <help>Monitor last lines of messages file</help>
+        </properties>
+        <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot</command>
+        <children>
+          <node name="color">
+            <properties>
+              <help>Output log in a colored fashion</help>
+            </properties>
+            <command>SYSTEMD_COLORS=false grc journalctl --no-hostname --follow --boot</command>
+          </node>
+          <node name="ids">
+            <properties>
+              <help>Monitor Intrusion Detection System log</help>
+            </properties>
+            <children>
+              <leafNode name="ddos-protection">
+                <properties>
+                  <help>Monitor last lines of DDOS protection</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit fastnetmon.service</command>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="certbot">
+            <properties>
+              <help>Monitor last lines of certbot log</help>
+            </properties>
+            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+          </leafNode>
+          <leafNode name="conntrack-sync">
+            <properties>
+              <help>Monitor last lines of conntrack-sync log</help>
+            </properties>
+            <command>journalctl --no-hostname --follow --boot --unit conntrackd.service</command>
+          </leafNode>
+          <leafNode name="console-server">
+            <properties>
+              <help>Monitor last lines of console server log</help>
+            </properties>
+            <command>journalctl --no-hostname --follow --boot --unit conserver-server.service</command>
+          </leafNode>
+          <node name="dhcp">
+            <properties>
+              <help>Monitor last lines of Dynamic Host Control Protocol log</help>
+            </properties>
+            <children>
+              <node name="server">
+                <properties>
+                  <help>Monitor last lines of DHCP server log</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit kea-dhcp4-server.service</command>
+              </node>
+              <node name="client">
+                <properties>
+                  <help>Monitor last lines of DHCP client log</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit "dhclient@*.service"</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show DHCP client log on specific interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                      </completionHelp>
+                    </properties>
+                    <command>journalctl --no-hostname --follow --boot --unit "dhclient@$6.service"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="dhcpv6">
+            <properties>
+              <help>Monitor last lines of Dynamic Host Control Protocol IPv6 log</help>
+            </properties>
+            <children>
+              <node name="server">
+                <properties>
+                  <help>Monitor last lines of DHCPv6 server log</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit kea-dhcp6-server.service</command>
+              </node>
+              <node name="client">
+                <properties>
+                  <help>Monitor last lines of DHCPv6 client log</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@*.service"</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show DHCPv6 client log on specific interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                    </properties>
+                    <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@$6.service"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="flow-accounting">
+            <properties>
+              <help>Monitor last lines of flow-accounting log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit uacctd.service</command>
+          </leafNode>
+          <leafNode name="frr">
+            <properties>
+              <help>Monitor last lines of FRRouting suite log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit frr.service</command>
+          </leafNode>
+          <leafNode name="ipoe-server">
+            <properties>
+              <help>Monitor last lines of IP over Ethernet server log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@ipoe.service</command>
+          </leafNode>
+          <leafNode name="kernel">
+            <properties>
+              <help>Monitor last lines of Linux Kernel log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --dmesg</command>
+          </leafNode>
+          <leafNode name="ndp-proxy">
+            <properties>
+              <help>Monitor last lines of Neighbor Discovery Protocol (NDP) Proxy</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit ndppd.service</command>
+          </leafNode>
+          <leafNode name="nhrp">
+            <properties>
+              <help>Monitor last lines of Next Hop Resolution Protocol log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
+          </leafNode>
+          <leafNode name="ntp">
+            <properties>
+              <help>Monitor last lines of Network Time Protocol log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit chrony.service</command>
+          </leafNode>
+          <node name="openvpn">
+            <properties>
+              <help>Monitor last lines of OpenVPN log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit openvpn@*.service</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of specific OpenVPN interface log</help>
+                  <completionHelp>
+                    <path>interfaces openvpn</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit openvpn@$5.service</command>
+              </tagNode>
+            </children>
+          </node>
+          <node name="pppoe">
+            <properties>
+              <help>Monitor last lines of PPPoE interface log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit "ppp@pppoe*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of PPPoE log for specific interface</help>
+                  <completionHelp>
+                    <path>interfaces pppoe</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit "ppp@$5.service"</command>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="pppoe-server">
+            <properties>
+              <help>Monitor last lines of PPPoE server log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pppoe.service</command>
+          </leafNode>
+          <node name="protocol">
+            <properties>
+              <help>Monitor routing protocol logs</help>
+            </properties>
+            <children>
+              <leafNode name="ospf">
+                <properties>
+                  <help>Monitor log for OSPF</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ospfd</command>
+              </leafNode>
+              <leafNode name="ospfv3">
+                <properties>
+                  <help>Monitor log for OSPF for IPv6</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ospf6d</command>
+              </leafNode>
+              <leafNode name="bgp">
+                <properties>
+                  <help>Monitor log for BGP</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/bgpd</command>
+              </leafNode>
+              <leafNode name="rip">
+                <properties>
+                  <help>Monitor log for RIP</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ripd</command>
+              </leafNode>
+              <leafNode name="ripng">
+                <properties>
+                  <help>Monitor log for RIPng</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ripngd</command>
+              </leafNode>
+              <leafNode name="static">
+                <properties>
+                  <help>Monitor log for static route</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/staticd</command>
+              </leafNode>
+              <leafNode name="multicast">
+                <properties>
+                  <help>Monitor log for Multicast protocol</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/pimd</command>
+              </leafNode>
+              <leafNode name="isis">
+                <properties>
+                  <help>Monitor log for ISIS</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/isisd</command>
+              </leafNode>
+              <leafNode name="openfabric">
+                <properties>
+                  <help>Monitor log for OpenFabric</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/fabricd</command>
+              </leafNode>
+              <leafNode name="nhrp">
+                <properties>
+                  <help>Monitor log for NHRP</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/nhrpd</command>
+              </leafNode>
+              <leafNode name="bfd">
+                <properties>
+                  <help>Monitor log for BFD</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/bfdd</command>
+              </leafNode>
+              <leafNode name="mpls">
+                <properties>
+                  <help>Monitor log for MPLS</help>
+                </properties>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ldpd</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="macsec">
+            <properties>
+              <help>Monitor last lines of MACsec</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of specific MACsec interface</help>
+                  <completionHelp>
+                    <path>interfaces macsec</path>
+                  </completionHelp>
+                </properties>
+                <command>SRC=$(cli-shell-api returnValue interfaces macsec "$5" source-interface); journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@$SRC.service"</command>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="router-advert">
+            <properties>
+              <help>Monitor last lines of Router Advertisement Daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit radvd.service</command>
+          </leafNode>
+          <leafNode name="snmp">
+            <properties>
+              <help>Monitor last lines of Simple Network Monitoring Protocol log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit snmpd.service</command>
+          </leafNode>
+          <node name="ssh">
+            <properties>
+              <help>Monitor last lines of Secure Shell log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
+            <children>
+              <node name="dynamic-protection">
+                <properties>
+                  <help>Monitor last lines of SSH guard log</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit sshguard.service</command>
+              </node>
+            </children>
+          </node>
+          <leafNode name="vpn">
+            <properties>
+              <help>Monitor last lines of ALL Virtual Private Network services</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="ipsec">
+            <properties>
+              <help>Monitor last lines of IPsec log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit strongswan.service</command>
+          </leafNode>
+          <leafNode name="l2tp">
+            <properties>
+              <help>Monitor last lines of L2TP log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
+          </leafNode>
+          <leafNode name="openconnect">
+            <properties>
+              <help>Monitor last lines of OpenConnect log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="pptp">
+            <properties>
+              <help>Monitor last lines of PPTP log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pptp.service</command>
+          </leafNode>
+          <leafNode name="sstp">
+            <properties>
+              <help>Monitor last lines of Secure Socket Tunneling Protocol server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@sstp.service</command>
+          </leafNode>
+          <node name="sstpc">
+            <properties>
+              <help>Monitor last lines of Secure Socket Tunneling Protocol client</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit "ppp@sstpc*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of SSTP client log for specific interface</help>
+                  <completionHelp>
+                    <path>interfaces sstpc</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit "ppp@$5.service"</command>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="vrrp">
+            <properties>
+              <help>Monitor last lines of Virtual Router Redundancy Protocol log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit keepalived.service</command>
+          </leafNode>
+          <leafNode name="vyos-configd">
+            <properties>
+              <help>Monitor last lines of VyOS configuration daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit vyos-configd.service</command>
+          </leafNode>
+          <leafNode name="vyos-domain-resolver">
+            <properties>
+              <help>Monitor last lines of VyOS domain resolver daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit vyos-domain-resolver.service</command>
+          </leafNode>
+          <node name="wireless">
+            <properties>
+              <help>Monitor last lines of Wireless interface log</help>
+            </properties>
+            <children>
+              <node name="wpa-supplicant">
+                <properties>
+                  <help>Monitor last lines of WPA supplicant</help>
+                </properties>
+                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --follow --unit "wpa_supplicant@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Monitor last lines of specific wireless interface supplicant</help>
+                      <completionHelp>
+                        <path>interfaces wireless</path>
+                      </completionHelp>
+                    </properties>
+                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "station" ]]; then journalctl --no-hostname --boot --follow --unit "wpa_supplicant@$6.service"; else echo "Wireless interface $6 not configured as station!"; fi</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="hostapd">
+                <properties>
+                  <help>Monitor last lines of host access point daemon</help>
+                </properties>
+                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --follow --unit "hostapd@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Monitor last lines of specific host access point interface</help>
+                      <completionHelp>
+                        <path>interfaces wireless</path>
+                      </completionHelp>
+                    </properties>
+                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "access-point" ]]; then journalctl --no-hostname --boot --follow --unit "hostapd@$6.service"; else echo "Wireless interface $6 not configured as access-point!"; fi</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

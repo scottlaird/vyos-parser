@@ -1,0 +1,35 @@
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# * Move 'api virtual-host' list to 'api-restrict virtual-host' so it
+#   is owned by service_https.py
+
+from vyos.configtree import ConfigTree
+
+old_base = ['service', 'https', 'api', 'virtual-host']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(old_base):
+        # Nothing to do
+        return
+
+    new_base = ['service', 'https', 'api-restrict', 'virtual-host']
+    config.set(new_base)
+
+    names = config.return_values(old_base)
+    for name in names:
+        config.set(new_base, value=name, replace=False)
+
+    config.delete(old_base)

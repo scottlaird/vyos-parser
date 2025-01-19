@@ -1,0 +1,32 @@
+# modified make_resolv_conf() for VyOS
+# should be used only if vyos-hostsd is running
+
+if /usr/bin/systemctl -q is-active vyos-hostsd; then
+    make_resolv_conf() {
+        hostsd_client="/usr/bin/vyos-hostsd-client"
+        hostsd_changes=
+
+        if [ -n "$new_domain_name" ]; then
+            logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
+            $hostsd_client --delete-search-domains --tag "dhcp-$interface"
+            logmsg info "Adding domain name \"$new_domain_name\" as search domain with tag \"dhcp-$interface\" via vyos-hostsd-client"
+            $hostsd_client --add-search-domains "$new_domain_name" --tag "dhcp-$interface"
+            hostsd_changes=y
+        fi
+
+        if [ -n "$new_domain_name_servers" ]; then
+            logmsg info "Deleting nameservers with tag \"dhcp-$interface\" via vyos-hostsd-client"
+            $hostsd_client --delete-name-servers --tag "dhcp-$interface"
+            logmsg info "Adding nameservers \"$new_domain_name_servers\" with tag \"dhcp-$interface\" via vyos-hostsd-client"
+            $hostsd_client --add-name-servers $new_domain_name_servers --tag "dhcp-$interface"
+            hostsd_changes=y
+        fi
+
+        if [ $hostsd_changes ]; then
+            logmsg info "Applying changes via vyos-hostsd-client"
+            $hostsd_client --apply
+        else
+            logmsg info "No changes to apply via vyos-hostsd-client"
+        fi
+    }
+fi

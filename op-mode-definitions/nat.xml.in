@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="nat">
+        <properties>
+          <help>Show IPv4 Network Address Translation (NAT) information</help>
+        </properties>
+        <children>
+          <node name="cgnat">
+            <properties>
+              <help>Show Carrier-Grade Network Address Translation (CGNAT)</help>
+            </properties>
+            <children>
+              <node name="allocation">
+                <properties>
+                  <help>Show allocated CGNAT parameters</help>
+                </properties>
+                <children>
+                  <tagNode name="external-address">
+                    <properties>
+                      <help>Show CGNAT allocations for an external IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --external-address "$6"</command>
+                  </tagNode>
+                  <tagNode name="internal-address">
+                    <properties>
+                      <help>Show CGNAT allocations for an internal IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --internal-address "$6"</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation</command>
+              </node>
+            </children>
+          </node>
+          <node name="source">
+            <properties>
+              <help>Show source IPv4 to IPv4 Network Address Translation (NAT) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured source NAT rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured source NAT rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction source --family inet</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active source NAT translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active source NAT translations for an IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet --address "$6"</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet</command>
+              </node>
+            </children>
+          </node>
+          <node name="destination">
+            <properties>
+              <help>Show destination IPv4 to IPv4 Network Address Translation (NAT) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured destination NAT rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured destination NAT rules</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction destination --family inet</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active destination NAT translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active NAT destination translations for an IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet --address "$6"</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

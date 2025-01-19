@@ -1,0 +1,41 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    for type in ['tunnel', 'l2tpv3']:
+        base = ['interfaces', type]
+        if not config.exists(base):
+            # Nothing to do
+            continue
+
+        for interface in config.list_nodes(base):
+            # Migrate "interface tunnel <tunX> encapsulation gre-bridge" to gretap
+            encap_path = base + [interface, 'encapsulation']
+            if type == 'tunnel' and config.exists(encap_path):
+                tmp = config.return_value(encap_path)
+                if tmp == 'gre-bridge':
+                    config.set(encap_path, value='gretap')
+
+            # Migrate "interface tunnel|l2tpv3 <interface> local-ip" to source-address
+            # Migrate "interface tunnel|l2tpv3 <interface> remote-ip" to remote
+            local_ip_path = base + [interface, 'local-ip']
+            if config.exists(local_ip_path):
+                config.rename(local_ip_path, 'source-address')
+
+            remote_ip_path = base + [interface, 'remote-ip']
+            if config.exists(remote_ip_path):
+                config.rename(remote_ip_path, 'remote')

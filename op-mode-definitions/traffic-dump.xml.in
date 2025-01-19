@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="traffic">
+        <properties>
+          <help>Monitor traffic dumps</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <command>${vyos_op_scripts_dir}/tcpdump.py $4</command>
+            <properties>
+              <help>Monitor traffic dump from an interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_dumpable_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="node.tag">
+                <properties>
+                  <help>Traffic capture options</help>
+                  <completionHelp>
+                    <script>${vyos_op_scripts_dir}/tcpdump.py --get-options-nested "${COMP_WORDS[@]}"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tcpdump.py "${@:4}"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

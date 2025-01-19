@@ -1,0 +1,82 @@
+{% macro conn(name, rw_conf, ike_group, esp_group) %}
+{# peer needs to reference the global IKE configuration for certain values #}
+{% set ike = ike_group[rw_conf.ike_group] %}
+{% set esp = esp_group[rw_conf.esp_group] %}
+    ra-{{ name }} {
+        remote_addrs = %any
+        local_addrs = {{ rw_conf.local_address if rw_conf.local_address is not vyos_defined('any') else '%any' }} # dhcp:{{ rw_conf.dhcp_interface if rw_conf.dhcp_interface is vyos_defined else 'no' }}
+        proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
+        version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
+        send_certreq = no
+{% if ike.dead_peer_detection is vyos_defined %}
+        dpd_timeout = {{ ike.dead_peer_detection.timeout }}
+        dpd_delay = {{ ike.dead_peer_detection.interval }}
+{% endif %}
+        rekey_time = {{ ike.lifetime }}s
+        keyingtries = 0
+{% if rw_conf.unique is vyos_defined %}
+        unique = {{ rw_conf.unique }}
+{% endif %}
+{% if rw_conf.pool is vyos_defined %}
+        pools = {{ rw_conf.pool | join(',') }}
+{% endif %}
+        local {
+{% if rw_conf.authentication.local_id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
+{#          please use " quotes - else Apple iOS goes crazy #}
+            id = "{{ rw_conf.authentication.local_id }}"
+{% endif %}
+{% if rw_conf.authentication.server_mode == 'x509' %}
+            auth = pubkey
+            certs = {{ rw_conf.authentication.x509.certificate }}.pem
+{% elif rw_conf.authentication.server_mode == 'pre-shared-secret' %}
+            auth = psk
+{% endif %}
+        }
+        remote {
+{% if rw_conf.authentication.client_mode == 'x509' %}
+            auth = pubkey
+{% elif rw_conf.authentication.client_mode.startswith("eap") %}
+            auth = {{ rw_conf.authentication.client_mode }}
+            eap_id = {{ '%any' if rw_conf.authentication.eap_id == 'any' else rw_conf.authentication.eap_id }}
+{% endif %}
+{% if rw_conf.authentication.client_mode is vyos_defined('eap-tls') or rw_conf.authentication.client_mode is vyos_defined('x509') %}
+{#          pass all configured CAs as filenames, separated by commas #}
+{#          this will produce a string like "MyCA1.pem,MyCA2.pem" #}
+            cacerts = {{ '.pem,'.join(rw_conf.authentication.x509.ca_certificate) ~ '.pem' }}
+{% endif %}
+        }
+        children {
+            {{ name }}-client  {
+                esp_proposals = {{ esp | get_esp_ike_cipher(ike) | join(',') }}
+{% if esp.life_bytes is vyos_defined %}
+                life_bytes = {{ esp.life_bytes }}
+{% endif %}
+{% if esp.life_packets is vyos_defined %}
+                life_packets = {{ esp.life_packets }}
+{% endif %}
+                life_time = {{ esp.lifetime }}s
+{% if esp.disable_rekey is vyos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{% endif %}
+                dpd_action = clear
+                inactivity = {{ rw_conf.timeout }}
+{% if rw_conf.replay_window is vyos_defined %}
+                replay_window = {{ rw_conf.replay_window }}
+{% endif %}
+{% set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
+{% set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
+{% set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
+                local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
+{% if rw_conf.bind is vyos_defined %}
+{#     The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+{#     Thus we simply shift the key by one to also support a vti0 interface #}
+{%     set if_id = rw_conf.bind | replace('vti', '') | int + 1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
+{% endif %}
+            }
+        }
+    }
+{% endmacro %}

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 networking information</help>
+        </properties>
+        <children>
+          <node name="neighbors">
+            <properties>
+              <help>Show IPv4 neighbor (ARP) table</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/neighbor.py show --family inet</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show IPv4 neighbor table for specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet --interface "$5"</command>
+              </tagNode>
+              <tagNode name="state">
+                <properties>
+                  <help>Show IPv4 neighbors with specified state</help>
+                  <completionHelp>
+                    <list>reachable stale failed permanent</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet --state "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+          #include <include/show-nht.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

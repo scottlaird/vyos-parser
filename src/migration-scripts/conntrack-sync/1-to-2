@@ -1,0 +1,46 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# VyOS 1.2 crux allowed configuring a lower or upper case loglevel. This
+# is no longer supported as the input data is validated and will lead to
+# an error. If user specifies an upper case logleve, make it lowercase
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'conntrack-sync']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    base_accept_proto = base + ['accept-protocol']
+    if config.exists(base_accept_proto):
+        tmp = config.return_value(base_accept_proto)
+        config.delete(base_accept_proto)
+        for protocol in tmp.split(','):
+            config.set(base_accept_proto, value=protocol, replace=False)
+
+    base_ignore_addr = base + ['ignore-address', 'ipv4']
+    if config.exists(base_ignore_addr):
+        tmp = config.return_values(base_ignore_addr)
+        config.delete(base_ignore_addr)
+        for address in tmp:
+            config.set(base + ['ignore-address'], value=address, replace=False)
+
+    # we no longer support cluster mode
+    base_cluster = base + ['failover-mechanism', 'cluster']
+    if config.exists(base_cluster):
+        config.delete(base_cluster)
