@@ -21,6 +21,7 @@ func main() {
 	files, _ := ioutil.ReadDir(*interfaceDefinitions)
 
 	id := &configmodel.InterfaceDefinition{}
+	vc := id.VyOSConfig()
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -31,21 +32,17 @@ func main() {
 			}
 
 			interfacedef := &configmodel.InterfaceDefinition{}
-
 			err = xml.Unmarshal(b, &interfacedef)
 			if err != nil {
 				panic(err)
 			}
 
-			//interfacedef.Print(0)
-
-			id.Merge(interfacedef)
+			vcn := interfacedef.VyOSConfig()
+			vc.Merge(vcn)
 		}
 	}
 
 	id.Fixup()
-
-	vc := id.VyOSConfig()
 
 	b, err := json.MarshalIndent(vc, "", "  ")
 	if err != nil {

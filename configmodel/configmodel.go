@@ -5,7 +5,6 @@ package configmodel
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"os"
 )
@@ -17,12 +16,6 @@ const (
 	GenericType_TagNode
 )
 
-// spaces returns a string with a specific number of space characters,
-// used for indenting.
-func spaces(indent int) string {
-	return fmt.Sprintf("%*s", indent, "")
-}
-
 // There are 3 node types in here (Node, LeafNode, TagNode), and I
 // don't want to have to keep re-writing common functions.  This
 // interface covers all 3 types.  Note that it's not `nodeType`, it's
@@ -31,7 +24,6 @@ func spaces(indent int) string {
 type nodeType[T any] interface {
 	GetName() string
 	Merge(T)
-	Print(int)
 }
 
 // mergeCollections merges two arrays of nodes and returns the result.
@@ -77,14 +69,6 @@ type InterfaceDefinition struct {
 func (id *InterfaceDefinition) Fixup() {
 	for _, n := range id.Nodes {
 		n.Fixup()
-	}
-}
-
-// Print an InterfaceDefinition
-func (id *InterfaceDefinition) Print(indent int) {
-	fmt.Printf("%sInterfaceDefinition\n", spaces(indent))
-	for _, n := range id.Nodes {
-		n.Print(indent + 2)
 	}
 }
 
@@ -202,12 +186,6 @@ func (n *Node) Fixup() {
 
 func (n *Node) GetName() string { return n.Name }
 
-func (n *Node) Print(indent int) {
-	fmt.Printf("%sNode(%q)\n", spaces(indent), n.Name)
-	// Not printing properties right now
-	n.Children.Print(indent + 2)
-}
-
 func (n *Node) Merge(n2 *Node) {
 	n.Children.Merge(n2.Children)
 }
@@ -304,19 +282,6 @@ func (nc *NodeChildren) Fixup() {
 	}
 }
 
-// Print prints the children of a node.
-func (nc *NodeChildren) Print(indent int) {
-	for _, ln := range nc.LeafNodes {
-		ln.Print(indent)
-	}
-	for _, n := range nc.Nodes {
-		n.Print(indent)
-	}
-	for _, tn := range nc.TagNodes {
-		tn.Print(indent)
-	}
-}
-
 // Merge merges two NodeChildren structs.
 func (nc *NodeChildren) Merge(nc2 *NodeChildren) {
 	nc.LeafNodes = mergeNodes(nc.LeafNodes, nc2.LeafNodes)
@@ -383,10 +348,6 @@ func (ln *LeafNode) Fixup() {
 
 func (ln *LeafNode) GetName() string { return ln.Name }
 
-func (ln *LeafNode) Print(indent int) {
-	fmt.Printf("%sLeafNode(%q) %s\n", spaces(indent), ln.Name, ln.Properties.valueType())
-}
-
 func (ln *LeafNode) Merge(n2 *LeafNode) {
 	return // leafnodes don't have children
 }
@@ -439,12 +400,6 @@ func (tn *TagNode) Fixup() {
 }
 
 func (tn *TagNode) GetName() string { return tn.Name }
-
-func (tn *TagNode) Print(indent int) {
-	fmt.Printf("%sTagNode(%q) %s\n", spaces(indent), tn.Name, tn.Properties.valueType())
-	// Not printing properties right now
-	tn.Children.Print(indent + 2)
-}
 
 func (tn *TagNode) Merge(tn2 *TagNode) {
 	tn.Children.Merge(tn2.Children)
