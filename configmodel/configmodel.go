@@ -1,7 +1,17 @@
 package configmodel
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/fs"
+	"os"
+)
+
+const (
+	GENERICTYPE_ROOT = iota
+	GENERICTYPE_NODE
+	GENERICTYPE_LEAFNODE
+	GENERICTYPE_TAGNODE
 )
 
 // spaces returns a string with a specific number of space characters,
@@ -80,6 +90,86 @@ func (id *InterfaceDefinition) Merge(id2 *InterfaceDefinition) {
 	id.Nodes = mergeNodes(id.Nodes, id2.Nodes)
 }
 
+// Write ConfigModel to JSON file
+func (id *InterfaceDefinition) WriteJSONFile(filename string, umask fs.FileMode) error {
+	b, err := json.MarshalIndent(id, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filename, b, umask)
+}
+
+func (id *InterfaceDefinition) Generic() *GenericNode {
+	return &GenericNode{
+		NodeType: GENERICTYPE_ROOT,
+		id: id,
+	}
+}
+
+func (id *InterfaceDefinition) FindNodeByName(name string) *GenericNode {
+	for _, n := range id.Nodes {
+		if n.Name == name {
+			return n.Generic()
+		}
+	}
+	return nil
+}
+
+
+// Read ConfigModel from a JSON file
+func LoadJSONFile(filename string) (*InterfaceDefinition, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	id := &InterfaceDefinition{}
+	err = json.Unmarshal(b, &id)
+	return id, err
+}
+
+// A GenericNode can be a Node, a LeafNode, or a TagNode
+type GenericNode struct {
+	NodeType int
+	n *Node
+	ln *LeafNode
+	tn *TagNode
+	id *InterfaceDefinition // root
+}
+
+// Find a specific node by name
+func (gn *GenericNode) FindNodeByName(name string) *GenericNode {
+	switch gn.NodeType {
+	case GENERICTYPE_ROOT:
+		return gn.id.FindNodeByName(name)
+	case GENERICTYPE_NODE:
+		return gn.n.FindNodeByName(name)
+	case GENERICTYPE_LEAFNODE:
+		return gn.ln.FindNodeByName(name)
+	case GENERICTYPE_TAGNODE:
+		return gn.tn.FindNodeByName(name)
+	default:
+		return nil
+	}
+}
+
+// GetName
+func (gn *GenericNode) GetName() string {
+	switch gn.NodeType {
+	case GENERICTYPE_ROOT:
+		return ""
+	case GENERICTYPE_NODE:
+		return gn.n.GetName()
+	case GENERICTYPE_LEAFNODE:
+		return gn.ln.GetName()
+	case GENERICTYPE_TAGNODE:
+		return gn.tn.GetName()
+	default:
+		return "UNKNOWN"
+	}
+}
+
+
+
 // Node models the `<node>` tag in VyOS's XML config spec.  A node is
 // basically a fixed string with no value in the middle of a config
 // line.  So, with `interface ethernet eth0 address dhcp` the first
@@ -94,7 +184,7 @@ type Node struct {
 
 func (n *Node) Fixup() {
 	// Nothing to do for Node yet.
-	
+
 	if n.Children != nil {
 		n.Children.Fixup()
 	}
@@ -110,6 +200,17 @@ func (n *Node) Print(indent int) {
 
 func (n *Node) Merge(n2 *Node) {
 	n.Children.Merge(n2.Children)
+}
+
+func (n *Node) Generic() *GenericNode {
+	return &GenericNode{
+		NodeType: GENERICTYPE_NODE,
+		n: n,
+	}
+}
+
+func (n *Node) FindNodeByName(name string) *GenericNode {
+	return n.Children.FindNodeByName(name)
 }
 
 // NodeProperties model the `<properties>` tag in VyOS's XML config
@@ -200,6 +301,26 @@ func (nc *NodeChildren) Merge(nc2 *NodeChildren) {
 	nc.TagNodes = mergeNodes(nc.TagNodes, nc2.TagNodes)
 }
 
+
+func (nc *NodeChildren) FindNodeByName(name string) *GenericNode {
+	for _, n := range nc.Nodes {
+		if n.Name == name {
+			return n.Generic()
+		}
+	}
+	for _, ln := range nc.LeafNodes {
+		if ln.Name == name {
+			return ln.Generic()
+		}
+	}
+	for _, tn := range nc.TagNodes {
+		if tn.Name == name {
+			return tn.Generic()
+		}
+	}
+	return nil
+}
+
 // LeafNode models the `<leafNode>` tag in VyOS's XML config spec.  A
 // leafNode is a terminal node with no children and optionally a
 // single parameter or list of parameters.
@@ -207,18 +328,18 @@ type LeafNode struct {
 	Name       string          `xml:"name,attr" json:"name"`
 	Owner      string          `xml:"owner,attr" json:"-"`
 	Properties *NodeProperties `xml:"properties" json:"-"`
-	ValueType string `json:"valuetype"`
+	ValueType  string          `json:"valuetype"`
 }
 
 func (ln *LeafNode) Fixup() {
 	if ln.Properties == nil {
-		ln.ValueType="SINGLE"
-	} else 	if ln.Properties.Valueless != nil {
-		ln.ValueType="NONE"
+		ln.ValueType = "SINGLE"
+	} else if ln.Properties.Valueless != nil {
+		ln.ValueType = "NONE"
 	} else if ln.Properties.Multi != nil {
-		ln.ValueType="MULTI"
+		ln.ValueType = "MULTI"
 	} else {
-		ln.ValueType="SINGLE"
+		ln.ValueType = "SINGLE"
 	}
 }
 
@@ -230,6 +351,17 @@ func (ln *LeafNode) Print(indent int) {
 
 func (ln *LeafNode) Merge(n2 *LeafNode) {
 	return // leafnodes don't have children
+}
+
+func (ln *LeafNode) Generic() *GenericNode {
+	return &GenericNode{
+		NodeType: GENERICTYPE_LEAFNODE,
+		ln: ln,
+	}
+}
+
+func (ln *LeafNode) FindNodeByName(name string) *GenericNode {
+	return nil
 }
 
 // TagNode models the `<tagNode>` tag in VyOS's XML config spec.  A
@@ -259,4 +391,15 @@ func (tn *TagNode) Print(indent int) {
 
 func (tn *TagNode) Merge(tn2 *TagNode) {
 	tn.Children.Merge(tn2.Children)
+}
+
+func (tn *TagNode) Generic() *GenericNode {
+	return &GenericNode{
+		NodeType: GENERICTYPE_TAGNODE,
+		tn: tn,
+	}
+}
+
+func (tn *TagNode) FindNodeByName(name string) *GenericNode {
+	return tn.Children.FindNodeByName(name)
 }
