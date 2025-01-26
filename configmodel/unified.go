@@ -2,16 +2,16 @@ package configmodel
 
 import (
 	"encoding/json"
-	"os"
 	"io/fs"
+	"os"
 )
 
 type VyOSConfigNode struct {
-	Type string `json:"type,omitempty"`
-	Name string `json:"name"`
+	Type     string            `json:"type,omitempty"`
+	Name     string            `json:"name"`
 	Children []*VyOSConfigNode `json:"children,omitempty"`
-	Multi *bool `json:"multi,omitempty"`
-	HasValue *bool `json:"has_value,omitempty"`
+	Multi    *bool             `json:"multi,omitempty"`
+	HasValue *bool             `json:"has_value,omitempty"`
 }
 
 func (vcn *VyOSConfigNode) FindNodeByName(name string) *VyOSConfigNode {
@@ -22,7 +22,6 @@ func (vcn *VyOSConfigNode) FindNodeByName(name string) *VyOSConfigNode {
 	}
 	return nil
 }
-
 
 // Write ConfigModel to JSON file
 func (vcn *VyOSConfigNode) WriteJSONFile(filename string, umask fs.FileMode) error {
@@ -45,4 +44,15 @@ OUTER:
 		}
 		vcn.Children = append(vcn.Children, node2)
 	}
+}
+
+// Read ConfigModel from a JSON file
+func LoadJSONFile(filename string) (*VyOSConfigNode, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	id := &VyOSConfigNode{}
+	err = json.Unmarshal(b, &id)
+	return id, err
 }

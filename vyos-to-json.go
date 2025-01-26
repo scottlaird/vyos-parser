@@ -42,8 +42,6 @@ func main() {
 		}
 	}
 
-	id.Fixup()
-
 	b, err := json.MarshalIndent(vc, "", "  ")
 	if err != nil {
 		panic(err)
