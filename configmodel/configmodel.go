@@ -9,72 +9,12 @@ import (
 	"os"
 )
 
-const (
-	GenericType_Root = iota
-	GenericType_Node
-	GenericType_LeafNode
-	GenericType_TagNode
-)
-
-// There are 3 node types in here (Node, LeafNode, TagNode), and I
-// don't want to have to keep re-writing common functions.  This
-// interface covers all 3 types.  Note that it's not `nodeType`, it's
-// `nodeType[T any]`, as this allows us to say that the `Merge()`
-// method takes a parameter of the same type.
-type nodeType[T any] interface {
-	GetName() string
-	Merge(T)
-}
-
-// mergeCollections merges two arrays of nodes and returns the result.
-// Any nodes that are in the second parameter (`b`) but not in the
-// first (`a`) are appended to `a`.  If both collections have a node
-// of the same name, then the nodes will be merged recursively.
-//
-// This allows us to merge VyOS's partial syntax XML files into a
-// single grammar.  For instance `interface ethernet XXX` and
-// `interface bridge XXX` are in different files.  So, when we merge
-// the top-level nodes, we find that they both have `interface`, and
-// then merge that recursively.  Under that, they both have `TagNode`s
-// that differ, so they're appended together, resulting in a single
-// syntax that allows for both types of interfaces.
-//
-// By doing this process across all ~120 XML files that define VyOS's
-// syntax, we're able to assemble a complete copy of their config
-// language pretty easily.
-func mergeNodes[T nodeType[T]](a, b []T) []T {
-OUTER:
-	for _, node2 := range b {
-		for _, node1 := range a {
-			if node1.GetName() == node2.GetName() {
-				node1.Merge(node2)
-				continue OUTER
-			}
-		}
-		a = append(a, node2)
-	}
-
-	return a
-}
-
 // InterfaceDefinition is the top-level definition of an config
 // setting in VyOS's XML spec.  It should really be called
 // `ConfigDefinition` or similar, but the XML tag that they use is
 // `InterfaceDefinition` so I'm sticking with that.
 type InterfaceDefinition struct {
 	Nodes []*Node `xml:"node", json:"Node"`
-}
-
-// Recursively fix field definitions
-func (id *InterfaceDefinition) Fixup() {
-	for _, n := range id.Nodes {
-		n.Fixup()
-	}
-}
-
-// Merge two InterfaceDefinitions
-func (id *InterfaceDefinition) Merge(id2 *InterfaceDefinition) {
-	id.Nodes = mergeNodes(id.Nodes, id2.Nodes)
 }
 
 // Write ConfigModel to JSON file
@@ -84,22 +24,6 @@ func (id *InterfaceDefinition) WriteJSONFile(filename string, umask fs.FileMode)
 		return err
 	}
 	return os.WriteFile(filename, b, umask)
-}
-
-func (id *InterfaceDefinition) Generic() *GenericNode {
-	return &GenericNode{
-		NodeType: GenericType_Root,
-		id:       id,
-	}
-}
-
-func (id *InterfaceDefinition) FindNodeByName(name string) *GenericNode {
-	for _, n := range id.Nodes {
-		if n.Name == name {
-			return n.Generic()
-		}
-	}
-	return nil
 }
 
 func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
@@ -112,58 +36,6 @@ func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
 	return c
 }
 
-// Read ConfigModel from a JSON file
-func LoadJSONFile(filename string) (*VyOSConfigNode, error) {
-	b, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	id := &VyOSConfigNode{}
-	err = json.Unmarshal(b, &id)
-	return id, err
-}
-
-// A GenericNode can be a Node, a LeafNode, or a TagNode
-type GenericNode struct {
-	NodeType int
-	n        *Node
-	ln       *LeafNode
-	tn       *TagNode
-	id       *InterfaceDefinition // root
-}
-
-// Find a specific node by name
-func (gn *GenericNode) FindNodeByName(name string) *GenericNode {
-	switch gn.NodeType {
-	case GenericType_Root:
-		return gn.id.FindNodeByName(name)
-	case GenericType_Node:
-		return gn.n.FindNodeByName(name)
-	case GenericType_LeafNode:
-		return gn.ln.FindNodeByName(name)
-	case GenericType_TagNode:
-		return gn.tn.FindNodeByName(name)
-	default:
-		return nil
-	}
-}
-
-// GetName
-func (gn *GenericNode) GetName() string {
-	switch gn.NodeType {
-	case GenericType_Root:
-		return ""
-	case GenericType_Node:
-		return gn.n.GetName()
-	case GenericType_LeafNode:
-		return gn.ln.GetName()
-	case GenericType_TagNode:
-		return gn.tn.GetName()
-	default:
-		return "UNKNOWN"
-	}
-}
-
 // Node models the `<node>` tag in VyOS's XML config spec.  A node is
 // basically a fixed string with no value in the middle of a config
 // line.  So, with `interface ethernet eth0 address dhcp` the first
@@ -174,31 +46,6 @@ type Node struct {
 	Owner      string          `xml:"owner,attr" json:"-"`
 	Properties *NodeProperties `xml:"properties" json:"-"`
 	Children   *NodeChildren   `xml:"children" json:"children"`
-}
-
-func (n *Node) Fixup() {
-	// Nothing to do for Node yet.
-
-	if n.Children != nil {
-		n.Children.Fixup()
-	}
-}
-
-func (n *Node) GetName() string { return n.Name }
-
-func (n *Node) Merge(n2 *Node) {
-	n.Children.Merge(n2.Children)
-}
-
-func (n *Node) Generic() *GenericNode {
-	return &GenericNode{
-		NodeType: GenericType_Node,
-		n:        n,
-	}
-}
-
-func (n *Node) FindNodeByName(name string) *GenericNode {
-	return n.Children.FindNodeByName(name)
 }
 
 func (n *Node) VyOSConfigNode() *VyOSConfigNode {
@@ -270,44 +117,6 @@ type NodeChildren struct {
 	TagNodes  []*TagNode  `xml:"tagNode" json:"TagNodes,omitempty"`
 }
 
-func (nc *NodeChildren) Fixup() {
-	for _, ln := range nc.LeafNodes {
-		ln.Fixup()
-	}
-	for _, n := range nc.Nodes {
-		n.Fixup()
-	}
-	for _, tn := range nc.TagNodes {
-		tn.Fixup()
-	}
-}
-
-// Merge merges two NodeChildren structs.
-func (nc *NodeChildren) Merge(nc2 *NodeChildren) {
-	nc.LeafNodes = mergeNodes(nc.LeafNodes, nc2.LeafNodes)
-	nc.Nodes = mergeNodes(nc.Nodes, nc2.Nodes)
-	nc.TagNodes = mergeNodes(nc.TagNodes, nc2.TagNodes)
-}
-
-func (nc *NodeChildren) FindNodeByName(name string) *GenericNode {
-	for _, n := range nc.Nodes {
-		if n.Name == name {
-			return n.Generic()
-		}
-	}
-	for _, ln := range nc.LeafNodes {
-		if ln.Name == name {
-			return ln.Generic()
-		}
-	}
-	for _, tn := range nc.TagNodes {
-		if tn.Name == name {
-			return tn.Generic()
-		}
-	}
-	return nil
-}
-
 func (nc *NodeChildren) VyOSConfigNode() []*VyOSConfigNode {
 	children := []*VyOSConfigNode{}
 
@@ -332,35 +141,6 @@ type LeafNode struct {
 	Owner      string          `xml:"owner,attr" json:"-"`
 	Properties *NodeProperties `xml:"properties" json:"-"`
 	ValueType  string          `json:"valuetype"`
-}
-
-func (ln *LeafNode) Fixup() {
-	if ln.Properties == nil {
-		ln.ValueType = "SINGLE"
-	} else if ln.Properties.Valueless != nil {
-		ln.ValueType = "NONE"
-	} else if ln.Properties.Multi != nil {
-		ln.ValueType = "MULTI"
-	} else {
-		ln.ValueType = "SINGLE"
-	}
-}
-
-func (ln *LeafNode) GetName() string { return ln.Name }
-
-func (ln *LeafNode) Merge(n2 *LeafNode) {
-	return // leafnodes don't have children
-}
-
-func (ln *LeafNode) Generic() *GenericNode {
-	return &GenericNode{
-		NodeType: GenericType_LeafNode,
-		ln:       ln,
-	}
-}
-
-func (ln *LeafNode) FindNodeByName(name string) *GenericNode {
-	return nil
 }
 
 func (ln *LeafNode) VyOSConfigNode() *VyOSConfigNode {
@@ -391,29 +171,6 @@ type TagNode struct {
 	Owner      string          `xml:"owner,attr" json:"-"`
 	Properties *NodeProperties `xml:"properties" json:"-"`
 	Children   *NodeChildren   `xml:"children" json:"children"`
-}
-
-func (tn *TagNode) Fixup() {
-	if tn.Children != nil {
-		tn.Children.Fixup()
-	}
-}
-
-func (tn *TagNode) GetName() string { return tn.Name }
-
-func (tn *TagNode) Merge(tn2 *TagNode) {
-	tn.Children.Merge(tn2.Children)
-}
-
-func (tn *TagNode) Generic() *GenericNode {
-	return &GenericNode{
-		NodeType: GenericType_TagNode,
-		tn:       tn,
-	}
-}
-
-func (tn *TagNode) FindNodeByName(name string) *GenericNode {
-	return tn.Children.FindNodeByName(name)
 }
 
 func (tn *TagNode) VyOSConfigNode() *VyOSConfigNode {
