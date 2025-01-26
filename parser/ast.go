@@ -20,9 +20,9 @@ func (vca *VyOSConfigAST) TreeSize() int {
 }
 
 type Node struct {
-	ContextNode *configmodel.GenericNode
-	NodeType int
-	NodeValue *string
+	ContextNode *configmodel.VyOSConfigNode
+	Type string
+	Value *string
 	Children []*Node
 }
 
@@ -35,9 +35,9 @@ func (n *Node) TreeSize() int {
 	return size
 }
 
-func newASTNode(contextNode *configmodel.GenericNode) *Node {
+func newASTNode(contextNode *configmodel.VyOSConfigNode) *Node {
 	return &Node{
-		NodeType: contextNode.NodeType,
+		Type: contextNode.Type,
 		ContextNode: contextNode,
 	}
 }
