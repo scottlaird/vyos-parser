@@ -51,7 +51,7 @@ func quoteIfNeeded(value string) string {
 func ParseSetFormat(config string, configModel *configmodel.InterfaceDefinition) (*VyOSConfigAST, error) {
 	ast := &VyOSConfigAST{}
 	child := &Node{
-		NodeType: NodeTypeRoot,
+		Type: "root",
 	}
 	ast.Child = child
 	scanner := bufio.NewScanner(strings.NewReader(config))
@@ -103,18 +103,18 @@ func WriteSetFormat(ast *VyOSConfigAST) (string, error) {
 func writeSetPartial(node *Node, context string) ([]string, error) {
 	results := []string{}
 	if node.ContextNode != nil {
-		context = context + " " + node.ContextNode.GetName()
+		context = context + " " + node.ContextNode.Name
 	}
 
-	if node.NodeValue != nil {
-		if node.NodeType == NodeTypeLeaf {
+	if node.Value != nil {
+		if node.Type == "leafnode" {
 			// VyOS always single-quotes LeafNode values
-			context = context + " '" + *node.NodeValue + "'"
+			context = context + " '" + *node.Value + "'"
 		} else {
 			// VyOS presumably still quotes TagNode values
 			// if they have spaces and/or shell
 			// metacharacters.
-			context = context + " " + quoteIfNeeded(*node.NodeValue)
+			context = context + " " + quoteIfNeeded(*node.Value)
 		}
 	}
 

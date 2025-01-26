@@ -11,10 +11,10 @@ import (
 
 // ParseConfigBootFormat takes a VyOS text configuration in
 // `config.boot` format and returns a VyOSConfigAST and/or an error.
-func ParseConfigBootFormat(config string, configModel *configmodel.InterfaceDefinition) (*VyOSConfigAST, error) {
+func ParseConfigBootFormat(config string, configModel *configmodel.VyOSConfigNode) (*VyOSConfigAST, error) {
 	ast := &VyOSConfigAST{}
 	child := &Node{
-		NodeType: NodeTypeRoot,
+		Type: "root",
 	}
 	ast.Child = child
 	scanner := bufio.NewScanner(strings.NewReader(config))
@@ -24,14 +24,14 @@ func ParseConfigBootFormat(config string, configModel *configmodel.InterfaceDefi
 	}
 
 	lineno := 0
-	err := parseConfigBootFormat(child, scanner, configModel.Generic(), &lineno)
+	err := parseConfigBootFormat(child, scanner, configModel, &lineno)
 	return ast, err
 }
 
 // parseConfigBootFormat parses everything underneath a higher-level
 // node in the config.  It reads from the `config` scanner and updates
 // `nodeContext` as needed, returning an error if it's unable to parse.
-func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *configmodel.GenericNode, lineno *int) error {
+func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *configmodel.VyOSConfigNode, lineno *int) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		(*lineno)++
@@ -68,11 +68,11 @@ func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configMode
 					fmt.Printf("Unquote error: %v\n", err)
 					return err
 				}
-				astNode.NodeValue = &value
+				astNode.Value = &value
 			} else {
 				if len(remainingLine)>0 {
 					// Not completely happy about this
-					astNode.NodeValue = &remainingLine
+					astNode.Value = &remainingLine
 					//fmt.Printf("Found extra value of %q in %q at line %d\n", remainingLine, line, *lineno)
 				}
 			}

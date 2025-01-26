@@ -95,4 +95,4 @@ set system syslog global facility local7 level 'debug'
 set system syslog host 10.0.0.28 facility all level 'info'
 set system time-zone 'America/Los_Angeles'
 PASS
-ok  	github.com/scottlaird/vyos-parser/parser	0.025s
+ok  	github.com/scottlaird/vyos-parser/parser	0.024s
