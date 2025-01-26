@@ -32,3 +32,17 @@ func (vcn *VyOSConfigNode) WriteJSONFile(filename string, umask fs.FileMode) err
 	}
 	return os.WriteFile(filename, b, umask)
 }
+
+// Merge the children of 2 nodes together
+func (vcn *VyOSConfigNode) Merge(b *VyOSConfigNode) {
+OUTER:
+	for _, node2 := range b.Children {
+		for _, node1 := range vcn.Children {
+			if node1.Name == node2.Name {
+				node1.Merge(node2)
+				continue OUTER
+			}
+		}
+		vcn.Children = append(vcn.Children, node2)
+	}
+}
