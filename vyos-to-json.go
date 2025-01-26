@@ -20,9 +20,12 @@ func main() {
 	flag.Parse()
 	files, _ := ioutil.ReadDir(*interfaceDefinitions)
 
-	id := &configmodel.InterfaceDefinition{}
-	vc := id.VyOSConfig()
+	vc := (&configmodel.InterfaceDefinition{}).VyOSConfig()
 
+	// Read through each interface definition file and construct
+	// an InterfaceDefintion object based on the XML found in the
+	// file.  Then merge them all together into the `vc` object,
+	// above.
 	for _, file := range files {
 		if !file.IsDir() {
 			filename := filepath.Join(*interfaceDefinitions, file.Name())
@@ -31,17 +34,21 @@ func main() {
 				panic(err)
 			}
 
-			interfacedef := &configmodel.InterfaceDefinition{}
-			err = xml.Unmarshal(b, &interfacedef)
+			id := &configmodel.InterfaceDefinition{}
+			err = xml.Unmarshal(b, &id) // parse XML
 			if err != nil {
 				panic(err)
 			}
 
-			vcn := interfacedef.VyOSConfig()
+			// Convert from configmodel.InterfaceDefinition to configmodel.VyOSConfigNode
+			vcn := id.VyOSConfig()
+
+			// And merge the nodes all together.
 			vc.Merge(vcn)
 		}
 	}
 
+	// Finally, write the merged config out as a JSON file.
 	b, err := json.MarshalIndent(vc, "", "  ")
 	if err != nil {
 		panic(err)
