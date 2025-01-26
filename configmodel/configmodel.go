@@ -3,11 +3,13 @@ package configmodel
 // configmodel implements a parser for VyOS's XML configuration
 // format.
 
-import (
-	"encoding/json"
-	"io/fs"
-	"os"
-)
+// This file mostly contains code for handling VyOS's interface
+// definition files, as found in 'vyos-1x/build/interface-definitions`
+// after running `make.  Once it's parsed, we generally copy it into a
+// VyOSConfigNode tree instead of using InterfaceDefinition directly,
+// because that lets us get rid of the bulk of the special-case
+// handling for Node/LeafNode/TagNode.
+
 
 // InterfaceDefinition is the top-level definition of an config
 // setting in VyOS's XML spec.  It should really be called
@@ -15,15 +17,6 @@ import (
 // `InterfaceDefinition` so I'm sticking with that.
 type InterfaceDefinition struct {
 	Nodes []*Node `xml:"node", json:"Node"`
-}
-
-// Write ConfigModel to JSON file
-func (id *InterfaceDefinition) WriteJSONFile(filename string, umask fs.FileMode) error {
-	b, err := json.MarshalIndent(id, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filename, b, umask)
 }
 
 func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
@@ -39,8 +32,9 @@ func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
 // Node models the `<node>` tag in VyOS's XML config spec.  A node is
 // basically a fixed string with no value in the middle of a config
 // line.  So, with `interface ethernet eth0 address dhcp` the first
-// `interface` is a Node, while `ethernet eth0` is a TagNode and
-// `address dhcp` is a LeafNode.
+// `interface` is a Node, while `ethernet eth0` is a TagNode (with a
+// parameter after the node name) and `address dhcp` is a LeafNode
+// (with no children and an optional parameter).
 type Node struct {
 	Name       string          `xml:"name,attr" json:"name"`
 	Owner      string          `xml:"owner,attr" json:"-"`
@@ -76,20 +70,6 @@ type NodeProperties struct {
 	//ConstraintErrorMessage string `xml:"constraintErrorMessage,chardata"`
 	Multi     *bool `xml:"multi" json:"multi,omitempty"`
 	Valueless *bool `xml:"valueless" json:"valueless,omitempty"`
-}
-
-func (np *NodeProperties) valueType() string {
-	if np == nil {
-		return "NIL"
-	}
-
-	if np.Multi != nil {
-		return "VALUE..."
-	}
-	if np.Valueless != nil {
-		return ""
-	}
-	return "VALUE"
 }
 
 type PropertyHelp struct {
