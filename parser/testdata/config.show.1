@@ -1,0 +1,240 @@
+ firewall {
+     flowtable default {
+         interface eth0
+         interface eth1
+         offload software
+     }
+     group {
+         interface-group connectx {
+             interface eth0
+             interface eth1
+         }
+     }
+     ipv4 {
+         forward {
+             filter {
+                 default-action accept
+                 rule 10 {
+                     action offload
+                     inbound-interface {
+                         group connectx
+                     }
+                     offload-target default
+                 }
+                 rule 900 {
+                     action accept
+                     destination {
+                         address 16.0.0.0/8
+                     }
+                 }
+                 rule 950 {
+                     action accept
+                     destination {
+                         address 48.0.0.0/8
+                     }
+                 }
+                 rule 999 {
+                     action reject
+                 }
+             }
+         }
+     }
+ }
+ interfaces {
+     ethernet eth0 {
+         address 10.250.1.254/24
+         description "router1 to swb;swb;et18/1;SWB-ROUTER1;CORE;40000"
+         disable-flow-control
+         hw-id 6c:b3:11:88:0f:6e
+         ipv6 {
+         }
+         offload {
+             gro
+             gso
+             hw-tc-offload
+             rfs
+             rps
+             sg
+             tso
+         }
+         ring-buffer {
+             rx 8192
+             tx 8192
+         }
+     }
+     ethernet eth1 {
+         address 10.250.0.254/24
+         description "router1 to swa;swa;et18/1;SWA-ROUTER1;CORE;40000"
+         disable-flow-control
+         hw-id 6c:b3:11:88:0f:6f
+         ipv6 {
+             address {
+             }
+         }
+         offload {
+             gro
+             gso
+             hw-tc-offload
+             rfs
+             rps
+             sg
+             tso
+         }
+         ring-buffer {
+             rx 8192
+             tx 8192
+         }
+     }
+     ethernet eth2 {
+         hw-id 58:47:ca:78:e4:f2
+         offload {
+             gro
+             gso
+             sg
+             tso
+         }
+     }
+     ethernet eth3 {
+         hw-id 58:47:ca:78:e4:f3
+         offload {
+             gro
+             gso
+             sg
+             tso
+         }
+     }
+     ethernet eth4 {
+         hw-id 58:47:ca:78:e4:f4
+     }
+     ethernet eth5 {
+         address dhcp
+         hw-id 58:47:ca:78:e4:f5
+     }
+     loopback lo {
+     }
+ }
+ protocols {
+     static {
+         arp {
+             interface eth0 {
+                 address 10.250.1.1 {
+                     mac e4:1d:2d:af:60:6c
+                 }
+             }
+             interface eth1 {
+                 address 10.250.0.1 {
+                     mac 98:03:9b:77:95:e6
+                 }
+             }
+         }
+         route 16.0.0.0/8 {
+             next-hop 10.250.0.1 {
+             }
+         }
+         route 48.0.0.0/8 {
+             next-hop 10.250.1.1 {
+             }
+         }
+     }
+ }
+ service {
+     lldp {
+         interface eth5 {
+         }
+         snmp
+     }
+     mdns {
+     }
+     ntp {
+         allow-client {
+             address 0.0.0.0/0
+             address ::/0
+         }
+         server 0.pool.ntp.org {
+         }
+         server 1.pool.ntp.org {
+         }
+         server 2.pool.ntp.org {
+         }
+         server 10.1.0.238 {
+         }
+         server 10.1.0.239 {
+         }
+     }
+     snmp {
+         community public {
+             authorization ro
+         }
+     }
+     ssh {
+         disable-host-validation
+         port 22
+     }
+ }
+ system {
+     config-management {
+         commit-revisions 100
+     }
+     conntrack {
+     }
+     console {
+         device ttyS0 {
+             speed 115200
+         }
+     }
+     domain-name internal.sigkill.org
+     host-name router-test
+     login {
+         user scott {
+             authentication {
+                 encrypted-password $6$xxxxxxx
+                 public-keys scott@fs2 {
+                     key AAAAxxxxxxxxx
+                     type ssh-rsa
+                 }
+             }
+             full-name "Scott Laird"
+         }
+         user vyos {
+             authentication {
+                 encrypted-password $6$xxxxxxxxx
+             }
+         }
+     }
+     name-server 10.1.5.70
+     name-server 8.8.8.8
+     name-server 8.8.4.4
+     option {
+         performance network-throughput
+     }
+     sysctl {
+         parameter net.core.rmem_default {
+             value 134217728
+         }
+         parameter net.core.rmem_max {
+             value 536870912
+         }
+         parameter net.core.wmem_default {
+             value 134217728
+         }
+         parameter net.core.wmem_max {
+             value 536870912
+         }
+     }
+     syslog {
+         global {
+             facility all {
+                 level info
+             }
+             facility local7 {
+                 level debug
+             }
+         }
+         host 10.0.0.28 {
+             facility all {
+                 level info
+             }
+         }
+     }
+     time-zone America/Los_Angeles
+ }
