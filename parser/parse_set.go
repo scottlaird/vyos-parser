@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"regexp"
-	"strings"
 	"strconv"
-	"encoding/csv"
+	"strings"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/scottlaird/vyos-parser/configmodel"
 )
 
@@ -37,18 +37,18 @@ func quoteIfNeeded(value string) string {
 // Note that VyOS's config outputter (`show | commands`) isn't very
 // consistent about quoting.  Examples, from VyOS 1.5 202501xxx:
 //
-//     set firewall ipv4 forward filter default-action 'accept'
-//     set protocols static route 16.0.0.0/8 next-hop 10.250.0.1
-//     set service ntp allow-client address '0.0.0.0/0'
-//     set service ntp server 10.1.0.238
-//     set service ssh port '22'
-//     set system name-server '8.8.8.8'
+//	set firewall ipv4 forward filter default-action 'accept'
+//	set protocols static route 16.0.0.0/8 next-hop 10.250.0.1
+//	set service ntp allow-client address '0.0.0.0/0'
+//	set service ntp server 10.1.0.238
+//	set service ssh port '22'
+//	set system name-server '8.8.8.8'
 //
 // For my sample config, I never see TagNodes with quoted names, but
 // LeafNodes *sometimes* are quoted and sometimes not.  Compare the
 // `set service ntp server` and `set system name-server` lines -- they
 // both contain an IP address here, but one is quoted and one isn't.
-func ParseSetFormat(config string, configModel *configmodel.InterfaceDefinition) (*VyOSConfigAST, error) {
+func ParseSetFormat(config string, configModel *configmodel.VyOSConfigNode) (*VyOSConfigAST, error) {
 	ast := &VyOSConfigAST{}
 	child := &Node{
 		Type: "root",
@@ -65,9 +65,7 @@ func ParseSetFormat(config string, configModel *configmodel.InterfaceDefinition)
 		line := strings.TrimSpace(scanner.Text())
 		lineno++
 
-		csvReader := csv.NewReader(strings.NewReader(line))
-		csvReader.Comma = ' '
-		fields, err := csvReader.Read()
+		fields, err := shellquote.Split(line)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to split %q by words at line %d: %v", line, lineno, err)
 		}
@@ -77,12 +75,65 @@ func ParseSetFormat(config string, configModel *configmodel.InterfaceDefinition)
 			return nil, err // lineno should be in err already
 		}
 	}
-	
+
 	return ast, nil
 }
 
-func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.InterfaceDefinition, lineno int) error {
-	fmt.Printf("Got %v at line %d\n", fields, lineno)
+// Unquote removes quotes from a string; for double quotes
+// strconv.Unquote would work, but that doesn't work for single
+// quotes.
+func unquote(s string) string {
+	// For double quotes, use strconv.Unquote
+	if s[0] == '"' {
+		u, err := strconv.Unquote(s)
+		if err == nil {
+			return u
+		}
+	}
+
+	// For single quotes, just strip the first and last character.
+	// This won't correctly handle escaped quotes, etc, but it's
+	// probably close enough for now.
+	if s[0] == '\'' {
+		return s[1 : len(s)-1]
+	}
+
+	return s
+}
+
+func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.VyOSConfigNode, lineno int) error {
+	node := ast.Child
+
+	if fields[0] != "set" {
+		return fmt.Errorf("First word is not 'set' at line %d", lineno)
+	}
+
+	i := 1
+	length := len(fields)
+	configNode := configModel
+
+	for {
+		var value *string
+		if i >= length {
+			break
+		}
+		field := unquote(fields[i])
+		configNode = configNode.FindNodeByName(field)
+		if configNode == nil {
+			return fmt.Errorf("Unexpected word %q at line %d", field, lineno)
+		}
+		if configNode.HasValue != nil && *configNode.HasValue {
+			i++
+			v := unquote(fields[i])
+			value = &v
+		}
+
+		newnode := node.addNode(configNode, value)
+		newnode.Value = value
+		node = newnode
+
+		i++
+	}
 
 	return nil
 }
@@ -96,7 +147,7 @@ func WriteSetFormat(ast *VyOSConfigAST) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.Join(results, "\n")+"\n", nil
+	return strings.Join(results, "\n") + "\n", nil
 }
 
 // writeSetPartial recursively turns AST nodes into `set ...` strings.

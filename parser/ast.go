@@ -41,3 +41,20 @@ func newASTNode(contextNode *configmodel.VyOSConfigNode) *Node {
 		ContextNode: contextNode,
 	}
 }
+
+func (n *Node) addNode(contextNode *configmodel.VyOSConfigNode, value *string) *Node {
+	for _, child := range n.Children {
+		if child.ContextNode != nil && child.ContextNode.Name == contextNode.Name {
+			if child.Value == value {
+				return child
+			}
+			// Should probably do something with 'Multi'
+			// here, but we're not actually trying to
+			// validate configs, just transform them.
+		}
+	}
+	child := newASTNode(contextNode)
+	child.Value = value
+	n.Children = append(n.Children, child)
+	return child
+}

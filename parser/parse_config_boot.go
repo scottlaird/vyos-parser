@@ -52,6 +52,10 @@ func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configMode
 		if configNode == nil {
 			return fmt.Errorf("Couldn't match config token %q at line number %d", name, *lineno)
 		}
+
+		// This can't use `addNode` because that tries to
+		// merge children with the same name, which breaks
+		// with TagNodes or LeafNodes with multi=true
 		astNode := newASTNode(configNode)
 		nodeContext.Children = append(nodeContext.Children, astNode)
 		
