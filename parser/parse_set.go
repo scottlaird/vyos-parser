@@ -96,7 +96,7 @@ func WriteSetFormat(ast *VyOSConfigAST) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.Join(results, "\n"), nil
+	return strings.Join(results, "\n")+"\n", nil
 }
 
 // writeSetPartial recursively turns AST nodes into `set ...` strings.
