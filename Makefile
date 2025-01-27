@@ -17,5 +17,8 @@ interface-definitions: $(config_xml_obj)
 vyos.json: interface-definitions vyos-to-json
 	./vyos-to-json --interface-definitions ${VYOSDIR}/${BUILD_DIR}/interface-definitions --out vyos.json
 
+vyos.json.gz: vyos.json
+	gzip -9c vyos.json > vyos.json.gz
+
 vyos-to-json: vyos-to-json.go
 	go build vyos-to-json.go
