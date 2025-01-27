@@ -31,3 +31,4 @@ go.work.sum
 vyos-parser
 vyos-to-json
 vyos.json
+vyos.json.gz
