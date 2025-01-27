@@ -5,7 +5,6 @@ set firewall group interface-group connectx interface 'eth0'
 set firewall group interface-group connectx interface 'eth1'
 set firewall ipv4 forward filter default-action 'accept'
 set firewall ipv4 forward filter rule 10 action 'offload'
-set firewall ipv4 forward filter rule 10 disable
 set firewall ipv4 forward filter rule 10 inbound-interface group 'connectx'
 set firewall ipv4 forward filter rule 10 offload-target 'default'
 set firewall ipv4 forward filter rule 900 action 'accept'
