@@ -5,14 +5,27 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"regexp"
 
 	"github.com/scottlaird/vyos-parser/configmodel"
 )
 
+var (
+	showQuoteRE = regexp.MustCompile("^[-_.:/+@$a-zA-Z0-9]+$")
+)
 
-// ParseConfigBootFormat takes a VyOS text configuration in
-// `config.boot` format and returns a VyOSConfigAST and/or an error.
-func ParseConfigBootFormat(config string, configModel *configmodel.VyOSConfigNode) (*VyOSConfigAST, error) {
+func doubleQuoteIfNeeded(value string) string {
+	if showQuoteRE.MatchString(value) {
+		return value
+	} else {
+		return strconv.Quote(value)
+	}
+}
+
+// ParseShowFormat takes a VyOS text configuration in the format
+// returned by 'show' from config mode and returns a VyOSConfigAST
+// and/or an error.
+func ParseShowFormat(config string, configModel *configmodel.VyOSConfigNode) (*VyOSConfigAST, error) {
 	ast := &VyOSConfigAST{}
 	child := &Node{
 		Type: "root",
@@ -25,14 +38,14 @@ func ParseConfigBootFormat(config string, configModel *configmodel.VyOSConfigNod
 	}
 
 	lineno := 0
-	err := parseConfigBootFormat(child, scanner, configModel, &lineno)
+	err := parseShowFormat(child, scanner, configModel, &lineno)
 	return ast, err
 }
 
-// parseConfigBootFormat parses everything underneath a higher-level
+// parseShowFormat parses everything underneath a higher-level
 // node in the config.  It reads from the `config` scanner and updates
 // `nodeContext` as needed, returning an error if it's unable to parse.
-func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *configmodel.VyOSConfigNode, lineno *int) error {
+func parseShowFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *configmodel.VyOSConfigNode, lineno *int) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		(*lineno)++
@@ -85,7 +98,7 @@ func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configMode
 
 		
 		if line[len(line)-1] == '{' {
-			parseConfigBootFormat(astNode, scanner, configNode, lineno)
+			parseShowFormat(astNode, scanner, configNode, lineno)
 		}
 	}
 
@@ -93,21 +106,15 @@ func parseConfigBootFormat(nodeContext *Node, scanner *bufio.Scanner, configMode
 	return nil
 }
 
-func WriteConfigBootFormat(ast *VyOSConfigAST) (string, error) {
-	results, err := writeConfigBootPartial(ast.Child, 0)
+func WriteShowFormat(ast *VyOSConfigAST) (string, error) {
+	results, err := writeShowPartial(ast.Child, 1)
 	if err != nil {
 		return "", err
 	}
 	return strings.Join(results, "\n")+"\n", nil
 }
 
-// spaces returns a string with a specific number of space characters,
-// used for indenting.
-func spaces(indent int) string {
-	return fmt.Sprintf("%*s", indent, "")
-}
-
-func writeConfigBootPartial(node *Node, indent int) ([]string, error) {
+func writeShowPartial(node *Node, indent int) ([]string, error) {
 	results := []string{}
 	line := ""
 	newIndent := indent + 4
@@ -117,11 +124,7 @@ func writeConfigBootPartial(node *Node, indent int) ([]string, error) {
 		
 		if node.Value != nil && *node.Value != "" {
 			value := *node.Value
-			// Leafnodes get values in double quotes
-			if node.Type == "leafnode" {
-				value = "\"" + value + "\""
-			}
-			line = line + " " + value
+			line = line + " " + doubleQuoteIfNeeded(value)
 		}
 	} else {
 		newIndent = indent
@@ -135,7 +138,7 @@ func writeConfigBootPartial(node *Node, indent int) ([]string, error) {
 			results = append(results, spaces(indent) + line + " {" )
 		}
 		for _, n := range node.Children {
-			res, err := writeConfigBootPartial(n, newIndent)
+			res, err := writeShowPartial(n, newIndent)
 			if err != nil {
 				return []string{}, err
 			}

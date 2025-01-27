@@ -10,9 +10,9 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 )
 
-func TestParseConfigBootRoundTrip(t *testing.T) {
+func TestParseShowRoundTrip(t *testing.T) {
 	configModel := getConfigModel(t)
-	filename := "testdata/config.boot.1"
+	filename := "testdata/config.show.1"
 
 	b, err := os.ReadFile(filename)
 	if err != nil {
@@ -20,7 +20,7 @@ func TestParseConfigBootRoundTrip(t *testing.T) {
 	}
 	originalCBConfig := string(b)
 
-	ast, err := ParseConfigBootFormat(originalCBConfig, configModel)
+	ast, err := ParseShowFormat(originalCBConfig, configModel)
 	if err != nil {
 		t.Fatalf("Failed to parse %s: %v", filename, err)
 	}
@@ -31,9 +31,9 @@ func TestParseConfigBootRoundTrip(t *testing.T) {
 		t.Errorf("Got treesize=%d, want %d", treesize, want)
 	}
 
-	newCBConfig, err := WriteConfigBootFormat(ast)
+	newCBConfig, err := WriteShowFormat(ast)
 	if err != nil {
-		t.Fatalf("Failed calling writeConfigBootFormat: %v", err)
+		t.Fatalf("Failed calling writeShowFormat: %v", err)
 	}
 
 	// Now, the original file has a bunch of version comments in
@@ -52,21 +52,21 @@ func TestParseConfigBootRoundTrip(t *testing.T) {
 	if newCBConfig != originalCBConfig {
 		edits := myers.ComputeEdits("foo", originalCBConfig, newCBConfig)
 		fmt.Println(gotextdiff.ToUnified(filename, "output", originalCBConfig, edits))
-		t.Errorf("Generated config.boot file does not match %s", filename)
+		t.Errorf("Generated config.show file does not match %s", filename)
 
 	}
 
 }
 
-func TestParseConfigBootToSet(t *testing.T) {
+func TestParseShowToSet(t *testing.T) {
 	configModel := getConfigModel(t)
-	filename := "testdata/config.boot.1"
+	filename := "testdata/config.show.1"
 
 	b, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("Failed to open testdata file: %v", err)
 	}
-	ast, err := ParseConfigBootFormat(string(b), configModel)
+	ast, err := ParseShowFormat(string(b), configModel)
 	if err != nil {
 		t.Fatalf("Failed to parse %s: %v", filename, err)
 	}
