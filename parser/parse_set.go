@@ -102,8 +102,11 @@ func unquote(s string) string {
 }
 
 func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.VyOSConfigNode, lineno int) error {
-	node := ast.Child
-
+	// Allow shell or C++ comments
+	if fields[0][0] == '#' || fields[0][0:2] == "//" {
+		return nil
+	}
+	
 	if fields[0] != "set" {
 		return fmt.Errorf("First word is not 'set' at line %d", lineno)
 	}
@@ -111,6 +114,7 @@ func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.
 	i := 1
 	length := len(fields)
 	configNode := configModel
+	node := ast.Child
 
 	for {
 		var value *string
