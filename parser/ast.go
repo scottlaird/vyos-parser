@@ -1,6 +1,8 @@
 package parser
 
 import (
+        "slices"
+        "cmp"
         "github.com/scottlaird/vyos-parser/configmodel"
 )
 
@@ -19,6 +21,10 @@ func (vca *VyOSConfigAST) TreeSize() int {
         return vca.Child.TreeSize()
 }
 
+func (vca *VyOSConfigAST) Sort() {
+        vca.Child.Sort()
+}
+
 type Node struct {
         ContextNode *configmodel.VyOSConfigNode
         Type string
@@ -33,6 +39,23 @@ func (n *Node) TreeSize() int {
                 size += child.TreeSize()
         }
         return size
+}
+
+func (n *Node) Sort() {
+        slices.SortFunc(n.Children, func(a, b *Node) int {
+                names := cmp.Compare(a.ContextNode.Name, b.ContextNode.Name)
+                if names != 0 {
+                        return names
+                }
+                if a.Value != nil && b.Value != nil {
+                        return cmp.Compare(*a.Value, *b.Value)
+                }
+                return 0
+        })
+
+        for _, child := range n.Children {
+                child.Sort()
+        }
 }
 
 func newASTNode(contextNode *configmodel.VyOSConfigNode) *Node {
