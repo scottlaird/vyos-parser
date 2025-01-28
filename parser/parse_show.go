@@ -99,7 +99,7 @@ func parseShowFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *con
                 if configNode.Multi {
                         // This node allows multiple values
                         for _, n := range nodeContext.Children {
-                                if n.ContextNode.Name==name && *n.Value == value {
+                                if n.ContextNode != nil && n.Value != nil && n.ContextNode.Name==name && *n.Value == value {
                                         astNode = n
                                 }
                         }

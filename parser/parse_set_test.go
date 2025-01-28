@@ -92,3 +92,36 @@ set firewall flowtable default offload hardware
         }
 
 }
+
+func TestParseSetSort(t *testing.T) {
+        configModel := getConfigModel(t)
+        config := `set firewall flowtable default interface eth1
+set interfaces ethernet eth0 address 'dhcp'
+set firewall flowtable default offload software
+set firewall flowtable default interface eth0
+set firewall flowtable default offload hardware
+`
+        ast, err := ParseSetFormat(config, configModel)
+        if err != nil {
+                t.Fatalf("Failed to parse static config: %v", err)
+        }
+
+        ast.Sort()
+
+        set, err := WriteSetFormat(ast)
+        if err != nil {
+                t.Fatalf("Failed calling writeSetFormat: %v", err)
+        }
+
+        expected := `set firewall flowtable default interface 'eth0'
+set firewall flowtable default interface 'eth1'
+set firewall flowtable default offload 'hardware'
+set interfaces ethernet eth0 address 'dhcp'
+`
+        if set != expected {
+                edits := myers.ComputeEdits("foo", expected, set)
+                fmt.Println(gotextdiff.ToUnified("original", "output", expected, edits))
+                t.Errorf("Generated set-format file does not match expected")
+        }
+
+}
