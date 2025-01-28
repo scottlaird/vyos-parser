@@ -16,17 +16,17 @@ package configmodel
 // `ConfigDefinition` or similar, but the XML tag that they use is
 // `InterfaceDefinition` so I'm sticking with that.
 type InterfaceDefinition struct {
-	Nodes []*Node `xml:"node", json:"Node"`
+        Nodes []*Node `xml:"node", json:"Node"`
 }
 
 func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
-	c := &VyOSConfigNode{
-		Type: "root",
-	}
-	for _, n := range id.Nodes {
-		c.Children = append(c.Children, n.VyOSConfigNode())
-	}
-	return c
+        c := &VyOSConfigNode{
+                Type: "root",
+        }
+        for _, n := range id.Nodes {
+                c.Children = append(c.Children, n.VyOSConfigNode())
+        }
+        return c
 }
 
 // Node models the `<node>` tag in VyOS's XML config spec.  A node is
@@ -36,23 +36,23 @@ func (id *InterfaceDefinition) VyOSConfig() *VyOSConfigNode {
 // parameter after the node name) and `address dhcp` is a LeafNode
 // (with no children and an optional parameter).
 type Node struct {
-	Name       string          `xml:"name,attr" json:"name"`
-	Owner      string          `xml:"owner,attr" json:"-"`
-	Properties *NodeProperties `xml:"properties" json:"-"`
-	Children   *NodeChildren   `xml:"children" json:"children"`
+        Name       string          `xml:"name,attr" json:"name"`
+        Owner      string          `xml:"owner,attr" json:"-"`
+        Properties *NodeProperties `xml:"properties" json:"-"`
+        Children   *NodeChildren   `xml:"children" json:"children"`
 }
 
 func (n *Node) VyOSConfigNode() *VyOSConfigNode {
-	c := &VyOSConfigNode{
-		Type: "node",
-		Name: n.Name,
-	}
+        c := &VyOSConfigNode{
+                Type: "node",
+                Name: n.Name,
+        }
 
-	if n.Children != nil {
-		c.Children = n.Children.VyOSConfigNode()
-	}
+        if n.Children != nil {
+                c.Children = n.Children.VyOSConfigNode()
+        }
 
-	return c
+        return c
 }
 
 // NodeProperties model the `<properties>` tag in VyOS's XML config
@@ -62,84 +62,86 @@ func (n *Node) VyOSConfigNode() *VyOSConfigNode {
 // when a Node (or generally a LeafNode) take either multiple values
 // or no values at all.
 type NodeProperties struct {
-	DefaultValue   string                    `xml:"defaultValue" json:"-"`
-	Help           []*PropertyHelp           `xml:"help" json:"-"`
-	CompletionHelp []*PropertyCompletionHelp `xml:"completionHelp" json:"-"`
-	ValueHelp      []*PropertyValueHelp      `xml:"valueHelp" json:"-"`
-	Constraint     []*PropertyConstraint     `xml:"constraint" json:"-"`
-	//ConstraintErrorMessage string `xml:"constraintErrorMessage,chardata"`
-	Multi     *bool `xml:"multi" json:"multi,omitempty"`
-	Valueless *bool `xml:"valueless" json:"valueless,omitempty"`
+        DefaultValue   string                    `xml:"defaultValue" json:"-"`
+        Help           []*PropertyHelp           `xml:"help" json:"-"`
+        CompletionHelp []*PropertyCompletionHelp `xml:"completionHelp" json:"-"`
+        ValueHelp      []*PropertyValueHelp      `xml:"valueHelp" json:"-"`
+        Constraint     []*PropertyConstraint     `xml:"constraint" json:"-"`
+        //ConstraintErrorMessage string `xml:"constraintErrorMessage,chardata"`
+        Multi     *bool `xml:"multi" json:"multi,omitempty"`
+        Valueless *bool `xml:"valueless" json:"valueless,omitempty"`
 }
 
 type PropertyHelp struct {
-	Text string `xml:",chardata"`
+        Text string `xml:",chardata"`
 }
 
 type PropertyCompletionHelp struct {
-	InnerXML string `xml:",innerxml"` // Just collect for now.
+        InnerXML string `xml:",innerxml"` // Just collect for now.
 }
 
 type PropertyValueHelp struct {
-	InnerXML string `xml:",innerxml"` // Just collect for now.
+        InnerXML string `xml:",innerxml"` // Just collect for now.
 }
 
 type PropertyConstraint struct {
-	InnerXML string `xml:",innerxml"` // Just collect for now.
+        InnerXML string `xml:",innerxml"` // Just collect for now.
 }
 
 // NodeChildren models the `<children>` tag inside of the various node
 // types in VyOS's XML config spec.  There are three types of nodes,
 // each contained in their own list.
 type NodeChildren struct {
-	LeafNodes []*LeafNode `xml:"leafNode" json:"LeafNodes,omitempty"`
-	Nodes     []*Node     `xml:"node" json:"Nodes,omitempty"`
-	TagNodes  []*TagNode  `xml:"tagNode" json:"TagNodes,omitempty"`
+        LeafNodes []*LeafNode `xml:"leafNode" json:"LeafNodes,omitempty"`
+        Nodes     []*Node     `xml:"node" json:"Nodes,omitempty"`
+        TagNodes  []*TagNode  `xml:"tagNode" json:"TagNodes,omitempty"`
 }
 
 func (nc *NodeChildren) VyOSConfigNode() []*VyOSConfigNode {
-	children := []*VyOSConfigNode{}
+        children := []*VyOSConfigNode{}
 
-	for _, ln := range nc.LeafNodes {
-		children = append(children, ln.VyOSConfigNode())
-	}
-	for _, n := range nc.Nodes {
-		children = append(children, n.VyOSConfigNode())
-	}
-	for _, tn := range nc.TagNodes {
-		children = append(children, tn.VyOSConfigNode())
-	}
+        for _, ln := range nc.LeafNodes {
+                children = append(children, ln.VyOSConfigNode())
+        }
+        for _, n := range nc.Nodes {
+                children = append(children, n.VyOSConfigNode())
+        }
+        for _, tn := range nc.TagNodes {
+                children = append(children, tn.VyOSConfigNode())
+        }
 
-	return children
+        return children
 }
 
 // LeafNode models the `<leafNode>` tag in VyOS's XML config spec.  A
 // leafNode is a terminal node with no children and optionally a
 // single parameter or list of parameters.
 type LeafNode struct {
-	Name       string          `xml:"name,attr" json:"name"`
-	Owner      string          `xml:"owner,attr" json:"-"`
-	Properties *NodeProperties `xml:"properties" json:"-"`
-	ValueType  string          `json:"valuetype"`
+        Name       string          `xml:"name,attr" json:"name"`
+        Owner      string          `xml:"owner,attr" json:"-"`
+        Properties *NodeProperties `xml:"properties" json:"-"`
+        ValueType  string          `json:"valuetype"`
 }
 
 func (ln *LeafNode) VyOSConfigNode() *VyOSConfigNode {
-	c := &VyOSConfigNode{
-		Type: "leafnode",
-		Name: ln.Name,
-	}
+        c := &VyOSConfigNode{
+                Type: "leafnode",
+                Name: ln.Name,
+        }
 
-	value := true
-	if ln.Properties != nil {
-		c.Multi = ln.Properties.Multi
-		if ln.Properties.Valueless != nil {
-			value = false
-		}
+        value := true
+        if ln.Properties != nil {
+                if ln.Properties.Multi != nil {
+                        c.Multi = true
+                }
+                if ln.Properties.Valueless != nil {
+                        value = false
+                }
 
-	}
-	c.HasValue = &value
+        }
+        c.HasValue = value
 
-	return c
+        return c
 }
 
 // TagNode models the `<tagNode>` tag in VyOS's XML config spec.  A
@@ -147,32 +149,25 @@ func (ln *LeafNode) VyOSConfigNode() *VyOSConfigNode {
 // value; in `interface ethernet eth0 address dhcp`, the `ethernet
 // eth0` is a tagNode, with a value of `eth0`.
 type TagNode struct {
-	Name       string          `xml:"name,attr" json:"name"`
-	Owner      string          `xml:"owner,attr" json:"-"`
-	Properties *NodeProperties `xml:"properties" json:"-"`
-	Children   *NodeChildren   `xml:"children" json:"children"`
+        Name       string          `xml:"name,attr" json:"name"`
+        Owner      string          `xml:"owner,attr" json:"-"`
+        Properties *NodeProperties `xml:"properties" json:"-"`
+        Children   *NodeChildren   `xml:"children" json:"children"`
 }
 
 func (tn *TagNode) VyOSConfigNode() *VyOSConfigNode {
-	c := &VyOSConfigNode{
-		Type: "tagnode",
-		Name: tn.Name,
-	}
+        c := &VyOSConfigNode{
+                Type: "tagnode",
+                Name: tn.Name,
+        }
 
-	// Probably not needed for TagNode?
-	value := true
-	if tn.Properties != nil {
-		c.Multi = tn.Properties.Multi
-		if tn.Properties.Valueless != nil {
-			value = false
-		}
+        // Always true for tagnodes?
+        c.Multi = true
+        c.HasValue = true
 
-	}
-	c.HasValue = &value
+        if tn.Children != nil {
+                c.Children = tn.Children.VyOSConfigNode()
+        }
 
-	if tn.Children != nil {
-		c.Children = tn.Children.VyOSConfigNode()
-	}
-
-	return c
+        return c
 }

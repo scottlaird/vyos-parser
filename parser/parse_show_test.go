@@ -95,3 +95,36 @@ func TestParseShowToSet(t *testing.T) {
         }
 
 }
+
+func TestParseShowDuplication(t *testing.T) {
+        configModel := getConfigModel(t)
+        config := `firewall {
+    flowtable default {
+        interface eth1
+        offload software
+    }
+}
+firewall {
+    flowtable default {
+        interface eth2
+        offload hardware
+    }
+}`
+        ast, err := ParseShowFormat(config, configModel)
+        if err != nil {
+                t.Fatalf("Failed to parse static config: %v", err)
+        }
+
+        set, err := WriteSetFormat(ast)
+        if err != nil {
+                t.Fatalf("Failed calling writeSetFormat: %v", err)
+        }
+
+        setLines := strings.Split(set, "\n")
+        wantLines := 4
+        if len(setLines) != wantLines {
+                t.Errorf("Got %d lines from WriteSetFormat, want=%d", len(setLines), wantLines)
+                fmt.Println(set)
+        }
+        
+}

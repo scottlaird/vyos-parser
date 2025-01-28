@@ -67,35 +67,60 @@ func parseShowFormat(nodeContext *Node, scanner *bufio.Scanner, configModel *con
                         return fmt.Errorf("Couldn't match config token %q at line number %d", name, *lineno)
                 }
 
-                // This can't use `addNode` because that tries to
-                // merge children with the same name, which breaks
-                // with TagNodes or LeafNodes with multi=true
-                astNode := newASTNode(configNode)
-                nodeContext.Children = append(nodeContext.Children, astNode)
-                
+                // Figure out if there's a value associated with this node
                 remainingLine := line[len(name):]
+                value := ""
                 if len(remainingLine)>0 {
                         if remainingLine[len(remainingLine)-1] == '{' {
                                 remainingLine = remainingLine[:len(remainingLine)-1] // strip "{" and whitespace from the end.
                         }
                         remainingLine = strings.TrimSpace(remainingLine)
 
+                        // Deal with quoting
                         if len(remainingLine)>0 && remainingLine[0]=='"' {
-                                value, err := strconv.Unquote(remainingLine)
+                                val, err := strconv.Unquote(remainingLine)
                                 if err != nil {
                                         fmt.Printf("Unquote error: %v\n", err)
                                         return err
                                 }
-                                astNode.Value = &value
+                                value = val
                         } else {
                                 if len(remainingLine)>0 {
                                         // Not completely happy about this
-                                        astNode.Value = &remainingLine
+                                        value = remainingLine
                                         //fmt.Printf("Found extra value of %q in %q at line %d\n", remainingLine, line, *lineno)
                                 }
                         }
                 }
 
+                var astNode *Node
+
+                // Check if this is a duplicate of an existing node
+                if configNode.Multi {
+                        // This node allows multiple values
+                        for _, n := range nodeContext.Children {
+                                if n.ContextNode.Name==name && *n.Value == value {
+                                        astNode = n
+                                }
+                        }
+                } else {
+                        // This node does *not* allow multiple values
+                        for _, n := range nodeContext.Children {
+                                if n.ContextNode.Name==name {
+                                        astNode = n
+                                }
+                        }
+                }
+
+                // Not a duplicate, so create a new node
+                if astNode == nil {
+                        astNode = newASTNode(configNode)
+                        nodeContext.Children = append(nodeContext.Children, astNode)
+                }
+
+                if value != "" {
+                        astNode.Value = &value
+                }
                 
                 if line[len(line)-1] == '{' {
                         parseShowFormat(astNode, scanner, configNode, lineno)
