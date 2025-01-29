@@ -10,7 +10,6 @@ package configmodel
 // because that lets us get rid of the bulk of the special-case
 // handling for Node/LeafNode/TagNode.
 
-
 // InterfaceDefinition is the top-level definition of an config
 // setting in VyOS's XML spec.  It should really be called
 // `ConfigDefinition` or similar, but the XML tag that they use is
@@ -110,7 +109,7 @@ func (nc *NodeChildren) VyOSConfigNode() []*VyOSConfigNode {
                 children = append(children, tn.VyOSConfigNode())
         }
 
-        return children
+        return flatten(children)
 }
 
 // LeafNode models the `<leafNode>` tag in VyOS's XML config spec.  A

@@ -102,11 +102,11 @@ func unquote(s string) string {
 }
 
 func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.VyOSConfigNode, lineno int) error {
-        // Allow shell or C++ comments
-        if fields[0][0] == '#' || fields[0][0:2] == "//" {
+        // Allow blank lines and shell or C++ comments
+        if len(fields) == 0 || len(fields[0]) == 0 || fields[0][0] == '#' || fields[0][0:2] == "//" {
                 return nil
         }
-        
+
         if fields[0] != "set" {
                 return fmt.Errorf("First word is not 'set' at line %d", lineno)
         }
@@ -115,6 +115,7 @@ func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.
         length := len(fields)
         configNode := configModel
         node := ast.Child
+        errorPath := []string{}
 
         for {
                 var value *string
@@ -122,14 +123,24 @@ func parseSetLine(ast *VyOSConfigAST, fields []string, configModel *configmodel.
                         break
                 }
                 field := unquote(fields[i])
-                configNode = configNode.FindNodeByName(field)
-                if configNode == nil {
-                        return fmt.Errorf("Unexpected word %q at line %d", field, lineno)
+                newConfigNode := configNode.FindNodeByName(field)
+                if newConfigNode == nil {
+                        options := []string{}
+                        for _, n := range configNode.Children {
+                                options = append(options, n.Name)
+                        }
+                        return fmt.Errorf("Unexpected word %q at line %d (options for %q are %v)", field, lineno, strings.Join(errorPath, " > "), options)
                 }
+
+                configNode = newConfigNode
+
                 if configNode.HasValue {
                         i++
                         v := unquote(fields[i])
                         value = &v
+                        errorPath = append(errorPath, field+" "+v)
+                } else {
+                        errorPath = append(errorPath, field)
                 }
 
                 newnode := node.addNode(configNode, value)
