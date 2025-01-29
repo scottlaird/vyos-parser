@@ -125,3 +125,46 @@ set interfaces ethernet eth0 address 'dhcp'
         }
 
 }
+
+func TestParseSetNAT(t *testing.T) {
+        configModel := getConfigModel(t)
+        showConfig := ` nat {
+     source {
+         rule 100 {
+             description "Outbound NAT"
+             outbound-interface {
+                 name eth0
+             }
+             source {
+                 address 10.0.0.0/8
+             }
+             translation {
+                 address masquerade
+             }
+         }
+     }
+ }
+`
+        setConfig := `set nat source rule 100 description 'Outbound NAT'
+set nat source rule 100 outbound-interface name 'eth0'
+set nat source rule 100 source address '10.0.0.0/8'
+set nat source rule 100 translation address 'masquerade'
+`
+
+        ast, err := ParseSetFormat(setConfig, configModel)
+        if err != nil {
+                t.Fatalf("Failed to parse static set config: %v", err)
+        }
+
+        show, err := WriteShowFormat(ast)
+        if err != nil {
+                t.Fatalf("Failed calling writeShowFormat: %v", err)
+        }
+
+        if show != showConfig {
+                edits := myers.ComputeEdits("foo", showConfig, show)
+                fmt.Println(gotextdiff.ToUnified("input", "output", showConfig, edits))
+                t.Errorf("Generated show-format file does not match")
+
+        }
+}
